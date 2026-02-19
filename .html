@@ -110,8 +110,9 @@
         <div class="tabs-group">
             <button id="btn-clicker" class="tab-btn active" onclick="switchTab('screen-clicker', this)">Main Terminal</button>
             <button id="btn-tetris" class="tab-btn hidden" onclick="switchTab('screen-tetris', this)">Tetris (Score: <span id="tetris-high">0</span>/1000)</button>
-            <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/50)</button>
+            <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/20)</button>
             <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
+            <button id="btn-relax" class="tab-btn" onclick="switchTab('screen-relax', this)">Espace détente</button>
         </div>
         <button class="tab-btn logout" onclick="logout()">Se déconnecter</button>
     </div>
@@ -159,10 +160,23 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>FLAPPY BIRD</h2>
-                <p>Click or Spacebar to jump. Reach 50 to unlock the final challenge.</p>
+                <p>Click or Spacebar to jump. Reach 20 to unlock the final challenge.</p>
                 <h3 style="color:var(--gold)">Score: <span id="flappy-score">0</span></h3>
             </div>
             <canvas id="flappy-canvas" width="320" height="480"></canvas>
+        </div>
+    </div>
+
+    <div id="screen-relax" class="screen">
+        <div class="canvas-container">
+            <div class="minigame-ui">
+                <h2>ESPACE DÉTENTE 🎰</h2>
+                <p>Machine à sous : chaque lancé coûte 1 jeton.</p>
+                <h3 style="color:var(--gold)">Jetons: <span id="slot-tokens">50</span></h3>
+                <h3>Résultat: <span id="slot-result">Prêt à lancer</span></h3>
+                <button class="buy-btn can-buy" style="margin-top:8px" onclick="spinSlotMachine()">Lancer (-1)</button>
+            </div>
+            <canvas id="slot-canvas" width="360" height="220"></canvas>
         </div>
     </div>
 
@@ -201,7 +215,7 @@
         let gameState = {
             cookies: 0, clickBase: 1, autoBase: 0, multiplier: 1, buildings: {},
             unlockedTetris: false, unlockedFlappy: false, unlockedFinal: false,
-            tetrisHigh: 0, flappyHigh: 0
+            tetrisHigh: 0, flappyHigh: 0, slotTokens: 50
         };
 
         buildingDefs.forEach(b => gameState.buildings[b.id] = 0);
@@ -295,6 +309,7 @@
                 gameState.unlockedFinal = data.gameState.unlockedFinal || false;
                 gameState.tetrisHigh = data.gameState.tetrisHigh || 0;
                 gameState.flappyHigh = data.gameState.flappyHigh || 0;
+                gameState.slotTokens = Number(data.gameState.slotTokens ?? 50);
 
                 buildingDefs.forEach(b => { if (typeof gameState.buildings[b.id] !== "number") gameState.buildings[b.id] = 0; });
             } catch (error) { console.error("Failed to load game state"); }
@@ -330,7 +345,7 @@
             }
 
             if (gameState.tetrisHigh >= 1000) gameState.unlockedFlappy = true;
-            if (gameState.flappyHigh >= 50) gameState.unlockedFinal = true;
+            if (gameState.flappyHigh >= 20) gameState.unlockedFinal = true;
 
             if (gameState.unlockedTetris) document.getElementById('btn-tetris').classList.remove('hidden');
             else document.getElementById('btn-tetris').classList.add('hidden');
@@ -343,6 +358,7 @@
 
             document.getElementById('tetris-high').innerText = gameState.tetrisHigh;
             document.getElementById('flappy-high').innerText = gameState.flappyHigh;
+            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
         }
 
         // --- CORE CLICKER ---
@@ -511,7 +527,7 @@
             if (currentActiveTab !== 'screen-tetris' || !piece) return;
             if (e.key === 'ArrowLeft') { piece.x--; if(collide(board, piece)) piece.x++; }
             if (e.key === 'ArrowRight') { piece.x++; if(collide(board, piece)) piece.x--; }
-            if (e.key === 'ArrowDown') { piece.y++; if(collide(board, piece)){ piece.y--; merge(board, piece); spawnTetrisPiece(); } }
+            if (e.key === 'ArrowDown') { piece.y++; if(collide(board, piece)){ piece.y--; merge(board, piece); clearLines(); spawnTetrisPiece(); } }
             if (e.key === 'ArrowUp') {
                 const rot = piece.matrix[0].map((val, index) => piece.matrix.map(row => row[index]).reverse());
                 const prev = piece.matrix; piece.matrix = rot;
@@ -525,10 +541,36 @@
         const fCanv = document.getElementById('flappy-canvas');
         const fCtx = fCanv.getContext('2d');
         let bird = { y: 240, v: 0, size: 20 }, pipes = [], fFrames = 0, fScore = 0;
+        let explosion = { active: false, x: 0, y: 0, life: 0, particles: [] };
 
         function jump(e) { if(currentActiveTab === 'screen-flappy') { bird.v = -6; if(e) e.preventDefault(); } }
         document.addEventListener('keydown', e => { if(e.code === 'Space') jump(e); });
         fCanv.addEventListener('mousedown', jump);
+
+        function triggerExplosion(x, y) {
+            explosion = {
+                active: true,
+                x,
+                y,
+                life: 25,
+                particles: Array.from({ length: 16 }, () => ({
+                    x,
+                    y,
+                    vx: (Math.random() - 0.5) * 5,
+                    vy: (Math.random() - 0.5) * 5,
+                    size: Math.random() * 4 + 2
+                }))
+            };
+        }
+
+        function resetFlappy() {
+            fScore = 0;
+            bird.y = 240;
+            bird.v = 0;
+            pipes = [];
+            fFrames = 0;
+            document.getElementById('flappy-score').innerText = '0';
+        }
 
         function flappyLoop() {
             if (currentActiveTab === 'screen-flappy') {
@@ -536,7 +578,8 @@
                 if(fFrames % 90 === 0) pipes.push({ x: 320, gap: Math.random()*200 + 50, passed: false });
                 
                 fCtx.fillStyle = '#000'; fCtx.fillRect(0,0, 320, 480);
-                fCtx.fillStyle = varColor('--gold'); fCtx.fillRect(50, bird.y, bird.size, bird.size);
+                fCtx.font = '22px sans-serif';
+                fCtx.fillText('✈️', 50, bird.y + bird.size);
 
                 pipes.forEach((p, i) => {
                     p.x -= 2;
@@ -545,8 +588,8 @@
                     fCtx.fillRect(p.x, p.gap + 120, 40, 480); 
                     
                     if ((50 < p.x + 40 && 50 + bird.size > p.x && (bird.y < p.gap || bird.y + bird.size > p.gap + 120)) || bird.y > 480 || bird.y < -bird.size) {
-                        fScore = 0; bird.y = 240; bird.v = 0; pipes = []; fFrames = 0; 
-                        document.getElementById('flappy-score').innerText = '0';
+                        triggerExplosion(60, bird.y + bird.size / 2);
+                        resetFlappy();
                     }
                     if (!p.passed && p.x + 40 < 50) {
                         p.passed = true;
@@ -555,10 +598,63 @@
                     }
                 });
                 pipes = pipes.filter(p => p.x > -40);
+
+                if (explosion.active) {
+                    explosion.particles.forEach(part => {
+                        part.x += part.vx;
+                        part.y += part.vy;
+                        part.size *= 0.94;
+                        fCtx.fillStyle = '#ff6b35';
+                        fCtx.fillRect(part.x, part.y, Math.max(part.size, 1), Math.max(part.size, 1));
+                    });
+                    explosion.life--;
+                    if (explosion.life <= 0) explosion.active = false;
+                }
                 fFrames++;
             }
             requestAnimationFrame(flappyLoop);
         }
+
+        // ==========================================
+        // BONUS: SLOT MACHINE (RELAX SPACE)
+        // ==========================================
+        const sCanv = document.getElementById('slot-canvas');
+        const sCtx = sCanv.getContext('2d');
+        let slotReels = ['🍒', '🍋', '⭐'];
+
+        function drawSlotMachine() {
+            sCtx.fillStyle = '#111';
+            sCtx.fillRect(0, 0, sCanv.width, sCanv.height);
+            sCtx.fillStyle = '#2a3042';
+            sCtx.fillRect(20, 20, sCanv.width - 40, sCanv.height - 40);
+            sCtx.fillStyle = '#03dac6';
+            sCtx.font = '54px sans-serif';
+            sCtx.fillText(slotReels[0], 70, 130);
+            sCtx.fillText(slotReels[1], 155, 130);
+            sCtx.fillText(slotReels[2], 240, 130);
+        }
+
+        function spinSlotMachine() {
+            if (gameState.slotTokens <= 0) {
+                document.getElementById('slot-result').innerText = 'Plus de jetons 😢';
+                return;
+            }
+
+            gameState.slotTokens -= 1;
+            const symbols = ['🍒', '🍋', '⭐', '🍉', '7️⃣'];
+            slotReels = Array.from({ length: 3 }, () => symbols[Math.floor(Math.random() * symbols.length)]);
+
+            let gain = 0;
+            if (slotReels[0] === slotReels[1] && slotReels[1] === slotReels[2]) gain = 8;
+            else if (slotReels[0] === slotReels[1] || slotReels[1] === slotReels[2] || slotReels[0] === slotReels[2]) gain = 2;
+
+            gameState.slotTokens += gain;
+            document.getElementById('slot-result').innerText = gain > 0 ? `+${gain} jetons !` : 'Perdu, retente ta chance';
+            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
+            drawSlotMachine();
+        }
+
+        drawSlotMachine();
 
         // ==========================================
         // MINIGAME 3: SWARM SURVIVAL (Brutal Mode)
