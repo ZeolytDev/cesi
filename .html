@@ -329,7 +329,7 @@
             <div class="minigame-ui">
                 <h2>PLATFORMER</h2>
                 <p>Utilise ← → pour bouger et Espace pour sauter. Atteins le drapeau vert sur chaque niveau.</p>
-                <h3>Niveau: <span id="platformer-level">1</span>/3</h3>
+                <h3>Niveau: <span id="platformer-level">1</span>/<span id="platformer-total-levels">3</span></h3>
                 <h3 style="color:var(--gold)">État: <span id="platformer-status">En cours...</span></h3>
             </div>
             <canvas id="platformer-canvas" width="600" height="260"></canvas>
@@ -1279,44 +1279,120 @@
                 jump: -7.2,
                 speed: 2.5,
                 spawn: { x: 20, y: 205 },
-                finish: { x: 566, y: 52, h: 48 },
+                finish: { x: 562, y: 28, h: 42 },
                 platforms: [
-                    { x: 0, y: 235, w: 600, h: 25, type: 'ground' },
-                    { x: 110, y: 200, w: 110, h: 12, type: 'stone' },
-                    { x: 260, y: 165, w: 90, h: 12, type: 'moss' },
-                    { x: 390, y: 130, w: 90, h: 12, type: 'stone' },
-                    { x: 520, y: 98, w: 70, h: 12, type: 'moss' }
+                    { x: 0, y: 236, w: 92, h: 24, type: 'ground' },
+                    { x: 106, y: 206, w: 78, h: 12, type: 'stone' },
+                    { x: 198, y: 178, w: 74, h: 12, type: 'moss' },
+                    { x: 288, y: 154, w: 70, h: 12, type: 'stone' },
+                    { x: 376, y: 130, w: 66, h: 12, type: 'moss' },
+                    { x: 458, y: 106, w: 62, h: 12, type: 'stone' },
+                    { x: 532, y: 82, w: 56, h: 12, type: 'moss' },
+                    { x: 448, y: 62, w: 76, h: 12, type: 'stone' },
+                    { x: 534, y: 40, w: 66, h: 12, type: 'moss' }
                 ]
             },
             {
                 gravity: 0.35,
-                jump: -7.35,
+                jump: -7.45,
                 speed: 2.8,
-                spawn: { x: 20, y: 205 },
-                finish: { x: 566, y: 44, h: 56 },
+                spawn: { x: 20, y: 202 },
+                finish: { x: 560, y: 24, h: 46 },
                 platforms: [
-                    { x: 0, y: 235, w: 150, h: 25, type: 'ground' },
-                    { x: 170, y: 205, w: 80, h: 12, type: 'stone' },
-                    { x: 285, y: 178, w: 75, h: 12, type: 'moss' },
-                    { x: 390, y: 148, w: 70, h: 12, type: 'stone' },
-                    { x: 485, y: 118, w: 65, h: 12, type: 'moss' },
-                    { x: 545, y: 90, w: 55, h: 12, type: 'stone' }
+                    { x: 0, y: 236, w: 88, h: 24, type: 'ground' },
+                    { x: 102, y: 212, w: 72, h: 12, type: 'stone' },
+                    { x: 190, y: 188, w: 68, h: 12, type: 'moss' },
+                    { x: 274, y: 164, w: 64, h: 12, type: 'stone' },
+                    { x: 354, y: 140, w: 60, h: 12, type: 'moss' },
+                    { x: 430, y: 116, w: 56, h: 12, type: 'stone' },
+                    { x: 500, y: 92, w: 52, h: 12, type: 'moss' },
+                    { x: 420, y: 72, w: 62, h: 12, type: 'stone' },
+                    { x: 334, y: 94, w: 56, h: 12, type: 'moss' },
+                    { x: 262, y: 116, w: 50, h: 12, type: 'stone' },
+                    { x: 344, y: 62, w: 66, h: 12, type: 'moss' },
+                    { x: 430, y: 42, w: 60, h: 12, type: 'stone' },
+                    { x: 506, y: 26, w: 60, h: 12, type: 'moss' }
                 ]
             },
             {
                 gravity: 0.38,
-                jump: -7.5,
+                jump: -7.6,
                 speed: 3.1,
-                spawn: { x: 20, y: 205 },
-                finish: { x: 566, y: 32, h: 68 },
+                spawn: { x: 20, y: 202 },
+                finish: { x: 560, y: 18, h: 44 },
                 platforms: [
-                    { x: 0, y: 235, w: 130, h: 25, type: 'ground' },
-                    { x: 150, y: 210, w: 62, h: 12, type: 'stone' },
-                    { x: 240, y: 184, w: 60, h: 12, type: 'moss' },
-                    { x: 332, y: 158, w: 56, h: 12, type: 'stone' },
-                    { x: 420, y: 132, w: 54, h: 12, type: 'moss' },
-                    { x: 500, y: 105, w: 52, h: 12, type: 'stone' },
-                    { x: 548, y: 80, w: 52, h: 12, type: 'moss' }
+                    { x: 0, y: 236, w: 82, h: 24, type: 'ground' },
+                    { x: 96, y: 210, w: 66, h: 12, type: 'stone' },
+                    { x: 176, y: 184, w: 62, h: 12, type: 'moss' },
+                    { x: 252, y: 158, w: 58, h: 12, type: 'stone' },
+                    { x: 324, y: 132, w: 54, h: 12, type: 'moss' },
+                    { x: 392, y: 106, w: 50, h: 12, type: 'stone' },
+                    { x: 456, y: 82, w: 48, h: 12, type: 'moss' },
+                    { x: 384, y: 64, w: 54, h: 12, type: 'stone' },
+                    { x: 308, y: 86, w: 50, h: 12, type: 'moss' },
+                    { x: 238, y: 108, w: 46, h: 12, type: 'stone' },
+                    { x: 172, y: 130, w: 44, h: 12, type: 'moss' },
+                    { x: 248, y: 74, w: 54, h: 12, type: 'stone' },
+                    { x: 320, y: 50, w: 56, h: 12, type: 'moss' },
+                    { x: 402, y: 34, w: 58, h: 12, type: 'stone' },
+                    { x: 486, y: 18, w: 62, h: 12, type: 'moss' }
+                ]
+            },
+            {
+                gravity: 0.39,
+                jump: -7.75,
+                speed: 3.25,
+                spawn: { x: 20, y: 204 },
+                finish: { x: 556, y: 16, h: 42 },
+                platforms: [
+                    { x: 0, y: 236, w: 78, h: 24, type: 'ground' },
+                    { x: 94, y: 214, w: 62, h: 12, type: 'stone' },
+                    { x: 170, y: 192, w: 58, h: 12, type: 'moss' },
+                    { x: 242, y: 170, w: 54, h: 12, type: 'stone' },
+                    { x: 308, y: 148, w: 50, h: 12, type: 'moss' },
+                    { x: 370, y: 126, w: 46, h: 12, type: 'stone' },
+                    { x: 430, y: 104, w: 44, h: 12, type: 'moss' },
+                    { x: 486, y: 84, w: 42, h: 12, type: 'stone' },
+                    { x: 430, y: 66, w: 44, h: 12, type: 'moss' },
+                    { x: 372, y: 84, w: 42, h: 12, type: 'stone' },
+                    { x: 316, y: 102, w: 40, h: 12, type: 'moss' },
+                    { x: 262, y: 120, w: 38, h: 12, type: 'stone' },
+                    { x: 212, y: 138, w: 36, h: 12, type: 'moss' },
+                    { x: 260, y: 90, w: 42, h: 12, type: 'stone' },
+                    { x: 316, y: 70, w: 44, h: 12, type: 'moss' },
+                    { x: 380, y: 52, w: 46, h: 12, type: 'stone' },
+                    { x: 454, y: 36, w: 50, h: 12, type: 'moss' },
+                    { x: 530, y: 20, w: 60, h: 12, type: 'stone' }
+                ]
+            },
+            {
+                gravity: 0.41,
+                jump: -7.95,
+                speed: 3.4,
+                spawn: { x: 18, y: 204 },
+                finish: { x: 552, y: 12, h: 40 },
+                platforms: [
+                    { x: 0, y: 236, w: 70, h: 24, type: 'ground' },
+                    { x: 88, y: 216, w: 56, h: 12, type: 'stone' },
+                    { x: 156, y: 196, w: 54, h: 12, type: 'moss' },
+                    { x: 222, y: 176, w: 50, h: 12, type: 'stone' },
+                    { x: 284, y: 156, w: 46, h: 12, type: 'moss' },
+                    { x: 342, y: 136, w: 42, h: 12, type: 'stone' },
+                    { x: 396, y: 116, w: 38, h: 12, type: 'moss' },
+                    { x: 446, y: 96, w: 36, h: 12, type: 'stone' },
+                    { x: 500, y: 78, w: 34, h: 12, type: 'moss' },
+                    { x: 452, y: 62, w: 36, h: 12, type: 'stone' },
+                    { x: 402, y: 78, w: 34, h: 12, type: 'moss' },
+                    { x: 354, y: 94, w: 32, h: 12, type: 'stone' },
+                    { x: 308, y: 110, w: 30, h: 12, type: 'moss' },
+                    { x: 264, y: 126, w: 30, h: 12, type: 'stone' },
+                    { x: 224, y: 142, w: 30, h: 12, type: 'moss' },
+                    { x: 264, y: 98, w: 34, h: 12, type: 'stone' },
+                    { x: 312, y: 80, w: 34, h: 12, type: 'moss' },
+                    { x: 366, y: 62, w: 36, h: 12, type: 'stone' },
+                    { x: 428, y: 44, w: 40, h: 12, type: 'moss' },
+                    { x: 496, y: 26, w: 46, h: 12, type: 'stone' },
+                    { x: 548, y: 12, w: 52, h: 12, type: 'moss' }
                 ]
             }
         ];
@@ -1331,6 +1407,7 @@
             platLevelIndex = Math.max(0, Math.min(levelIndex, platformerLevels.length - 1));
             const level = getCurrentPlatformerLevel();
             platPlayer = { x: level.spawn.x, y: level.spawn.y, w: 22, h: 22, vx: 0, vy: 0, onGround: false, face: 1 };
+            document.getElementById('platformer-total-levels').innerText = `${platformerLevels.length}`;
             document.getElementById('platformer-level').innerText = `${platLevelIndex + 1}`;
             document.getElementById('platformer-status').innerText = gameState.platformerSolved ? 'Déjà réussi ✅' : `Niveau ${platLevelIndex + 1} en cours...`;
         }
