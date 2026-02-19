@@ -40,6 +40,53 @@
         .tab-btn.logout:hover { background: rgba(255, 143, 159, 0.15); }
         .hidden { display: none !important; }
 
+        .retro-banner {
+            position: fixed;
+            top: 62px;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            background: linear-gradient(90deg, #f97316, #ef4444, #ec4899);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            border-top: 1px solid rgba(255, 255, 255, 0.25);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .retro-banner span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: retroScroll 18s linear infinite;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+        }
+        @keyframes retroScroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-100%); }
+        }
+
+        .death-popup {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.72);
+            z-index: 40;
+        }
+        .death-popup-card {
+            width: min(92vw, 430px);
+            background: linear-gradient(170deg, #26203a 0%, #1a1427 100%);
+            border: 2px solid #ffd700;
+            border-radius: 14px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+            padding: 18px;
+            text-align: center;
+        }
+        .death-popup-card img { width: 100%; border-radius: 10px; margin-bottom: 10px; }
+        .death-popup-card h3 { margin: 8px 0; color: var(--gold); }
+
         /* --- SCREENS --- */
         .screen { display: none; width: 100%; height: 100%; flex: 1; }
         .screen.active { display: flex; }
@@ -140,6 +187,8 @@
         <button class="tab-btn logout" onclick="logout()">Se déconnecter</button>
     </div>
 
+    <div id="retro-banner" class="retro-banner hidden"><span id="retro-banner-text"></span></div>
+
     <div id="screen-clicker" class="screen active">
         <div id="game-layer" class="blurred">
             <div class="game-area">
@@ -231,7 +280,7 @@
                     </div>
                 </div>
                 <div class="relax-card">
-                    <h3>Roulette (Rouge/Noir/Pair/Impair)</h3>
+                    <h3>Roulette truquée (Rouge/Noir/Pair/Impair)</h3>
                     <p id="roulette-result">Choisis une mise puis lance.</p>
                     <canvas id="roulette-canvas" width="360" height="220"></canvas>
                     <div class="actions-row" style="margin-bottom:8px; flex-wrap: wrap;">
@@ -243,6 +292,23 @@
                     <div class="actions-row">
                         <input id="roulette-bet" type="number" min="1" value="5" style="width:100px" />
                         <button class="buy-btn can-buy" onclick="spinRoulette()">Miser</button>
+                    </div>
+                </div>
+                <div class="relax-card">
+                    <h3>Poker Classique</h3>
+                    <p id="classic-poker-result">5 cartes contre la banque, meilleure combinaison gagne.</p>
+                    <div class="actions-row">
+                        <input id="classic-poker-bet" type="number" min="1" value="20" style="width:100px" />
+                        <button class="buy-btn" onclick="playClassicPoker()">Distribuer</button>
+                    </div>
+                </div>
+                <div class="relax-card">
+                    <h3>Don de jetons</h3>
+                    <p id="donation-result">Transfère tes jetons aux joueurs disponibles.</p>
+                    <div class="actions-row">
+                        <select id="donation-user" style="width:180px; padding:8px; background:#121726; color:#fff; border:1px solid #39415a; border-radius:6px;"></select>
+                        <input id="donation-amount" type="number" min="1" value="15" style="width:100px" />
+                        <button class="buy-btn" onclick="donateTokens()">Donner</button>
                     </div>
                 </div>
                 <div class="relax-card">
@@ -264,7 +330,7 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>POKER ULTIMATE ♠️</h2>
-                <p>Jeu secret débloqué à 1000 jetons. 1 carte contre la banque: plus haute carte gagne (A haut).</p>
+                <p>Jeu secret débloqué à 1000 jetons. Désormais: 3 cartes chacun, paire/brelan possibles, bonus jackpot.</p>
                 <h3 style="color:var(--gold)">Jetons: <span id="poker-tokens">50</span></h3>
             </div>
             <div class="relax-card" style="width:min(95vw, 640px)">
@@ -287,6 +353,9 @@
                 <h3 style="color:var(--gold)">Time: <span id="dodge-score">0</span>s / 30s</h3>
             </div>
             <canvas id="dodge-canvas" width="600" height="400"></canvas>
+            <div class="actions-row" style="margin-top:10px;">
+                <button id="restart-dodge" class="buy-btn can-buy" onclick="resetDodge(true)">Relancer</button>
+            </div>
         </div>
     </div>
 
@@ -315,7 +384,8 @@
             cookies: 0, clickBase: 1, autoBase: 0, multiplier: 1, buildings: {},
             unlockedTetris: false, unlockedMemory: false, unlockedFlappy: false, unlockedFinal: false,
             memorySolved: false, memoryAttempts: 0,
-            tetrisHigh: 0, flappyHigh: 0, slotTokens: 50, unlockedPoker: false
+            tetrisHigh: 0, flappyHigh: 0, slotTokens: 50, unlockedPoker: false,
+            claimedFlappyMilestones: [], completedRewards: {}, donationHistory: []
         };
 
         buildingDefs.forEach(b => gameState.buildings[b.id] = 0);
@@ -391,6 +461,8 @@
                 saveLoopStarted = true;
                 
                 requestAnimationFrame(tetrisLoop);
+                initRetroBanner();
+                refreshDonationUsers();
                 requestAnimationFrame(flappyLoop);
                 requestAnimationFrame(dodgeLoop);
             }
@@ -420,6 +492,9 @@
                 gameState.flappyHigh = data.gameState.flappyHigh || 0;
                 gameState.slotTokens = Number(data.gameState.slotTokens ?? 50);
                 gameState.unlockedPoker = Boolean(data.gameState.unlockedPoker ?? false);
+                gameState.claimedFlappyMilestones = Array.isArray(data.gameState.claimedFlappyMilestones) ? data.gameState.claimedFlappyMilestones : [];
+                gameState.completedRewards = data.gameState.completedRewards || {};
+                gameState.donationHistory = Array.isArray(data.gameState.donationHistory) ? data.gameState.donationHistory : [];
 
                 buildingDefs.forEach(b => { if (typeof gameState.buildings[b.id] !== "number") gameState.buildings[b.id] = 0; });
             } catch (error) { console.error("Failed to load game state"); }
@@ -515,6 +590,73 @@
             document.getElementById('flappy-high').innerText = gameState.flappyHigh;
             document.getElementById('slot-tokens').innerText = gameState.slotTokens;
             document.getElementById('poker-tokens').innerText = gameState.slotTokens;
+            refreshDonationUsers();
+        }
+
+
+        function initRetroBanner() {
+            const banner = document.getElementById('retro-banner');
+            banner.classList.remove('hidden');
+            const messages = [
+                "🔥 De beaux inconnus te cherchent à 2 rues: soirée néon, poker et confidences jusqu'à minuit…",
+                "💋 Notification locale: un gentleman mystérieux veut te défier à la roulette (et peut-être t'offrir un cocktail).",
+                "🌙 Ambiance 2010: SMS secret reçu — \"retrouve-moi près du casino, tenue chic exigée\".",
+                "🎲 Scénario TORRIDE (PG-13): regards insistants, jackpots et rendez-vous imprévu juste après ta victoire."
+            ];
+            let idx = 0;
+            const text = document.getElementById('retro-banner-text');
+            text.innerText = messages[idx];
+            setInterval(() => {
+                idx = (idx + 1) % messages.length;
+                text.innerText = messages[idx];
+            }, 9000);
+        }
+
+        function rewardCompletion(gameKey, amount, message) {
+            if (gameState.completedRewards[gameKey]) return;
+            gameState.completedRewards[gameKey] = true;
+            payoutTokens(amount);
+            alert(`Récompense débloquée: +${amount} jetons (${message})`);
+        }
+
+        function triggerRetroDeathPopup(gameName) {
+            const seeds = ['neon-arcade', 'retro-pixel', 'vhs-party', 'cyber-heart', 'arcade-rush'];
+            const seed = seeds[Math.floor(Math.random() * seeds.length)];
+            const overlay = document.createElement('div');
+            overlay.className = 'death-popup';
+            overlay.innerHTML = `
+                <div class="death-popup-card">
+                    <img src="https://picsum.photos/seed/${seed}/420/220" alt="retro" />
+                    <h3>${gameName}: GAME OVER</h3>
+                    <p>💾 Continue ? Les années 2010 veulent ton revanche.</p>
+                    <button class="buy-btn can-buy" id="close-popup">Relancer</button>
+                </div>`;
+            document.body.appendChild(overlay);
+            overlay.querySelector('#close-popup').onclick = () => overlay.remove();
+        }
+
+        function refreshDonationUsers() {
+            const select = document.getElementById('donation-user');
+            if (!select) return;
+            const current = currentUser?.email || 'player@swarm.io';
+            const available = [
+                'neo@swarm.io',
+                'luna@swarm.io',
+                'ace@swarm.io',
+                'pixel@swarm.io'
+            ].filter(u => u !== current);
+            const prev = select.value;
+            select.innerHTML = available.map(u => `<option value="${u}">${u}</option>`).join('');
+            if (available.includes(prev)) select.value = prev;
+        }
+
+        function donateTokens() {
+            const target = document.getElementById('donation-user').value;
+            const amount = getBetValue('donation-amount');
+            if (!target) return;
+            if (!spendTokens(amount, 'donation-result', 'un don')) return;
+            gameState.donationHistory.push({ to: target, amount, at: Date.now() });
+            document.getElementById('donation-result').innerText = `Don envoyé à ${target}: ${amount} jetons.`;
         }
 
         // --- CORE CLICKER ---
@@ -627,7 +769,7 @@
         function spawnTetrisPiece() {
             const type = Math.floor(Math.random() * 7) + 1;
             piece = { matrix: shapes[type], x: 4, y: 0, type: type };
-            if (collide(board, piece)) { board.forEach(row => row.fill(0)); tScore = 0; } // Game Over
+            if (collide(board, piece)) { board.forEach(row => row.fill(0)); tScore = 0; triggerRetroDeathPopup('Tetris'); } // Game Over
         }
         
         function collide(b, p) {
@@ -649,6 +791,7 @@
                 const row = board.splice(y, 1)[0].fill(0);
                 board.unshift(row); ++y; tScore += 100;
                 if(tScore > gameState.tetrisHigh) { gameState.tetrisHigh = tScore; checkUnlocks(); }
+                if (tScore >= 1000) rewardCompletion('tetris', 150, 'objectif Tetris atteint');
                 document.getElementById('tetris-score').innerText = tScore;
             }
         }
@@ -745,12 +888,23 @@
                     
                     if ((50 < p.x + 40 && 50 + bird.size > p.x && (bird.y < p.gap || bird.y + bird.size > p.gap + 120)) || bird.y > 480 || bird.y < -bird.size) {
                         triggerExplosion(60, bird.y + bird.size / 2);
+                        triggerRetroDeathPopup('Flappy Bird');
                         resetFlappy();
                     }
                     if (!p.passed && p.x + 40 < 50) {
                         p.passed = true;
                         fScore++; document.getElementById('flappy-score').innerText = fScore;
                         if(fScore > gameState.flappyHigh) { gameState.flappyHigh = fScore; checkUnlocks(); }
+                        const milestones = [30, 40, 50, 60, 80, 100];
+                        milestones.forEach(ms => {
+                            if (fScore >= ms && !gameState.claimedFlappyMilestones.includes(ms)) {
+                                gameState.claimedFlappyMilestones.push(ms);
+                                const gain = 20 + Math.floor(ms * 1.5);
+                                payoutTokens(gain);
+                                document.getElementById('flappy-score').innerText = `${fScore} (+${gain} jetons!)`;
+                            }
+                        });
+                        if (fScore >= 20) rewardCompletion('flappyFinish', 120, 'objectif Flappy atteint');
                     }
                 });
                 pipes = pipes.filter(p => p.x > -40);
@@ -827,6 +981,7 @@
                     gameState.unlockedFlappy = true;
                     checkUnlocks();
                     document.getElementById('slot-result').innerText = 'Memory terminé, Flappy déverrouillé ✅';
+                    rewardCompletion('memory', 100, 'Memory terminé');
                 }
                 renderMemoryBoard();
                 return;
@@ -913,6 +1068,14 @@
                 rCtx.closePath();
                 rCtx.fillStyle = entry.color === 'red' ? '#dc2626' : entry.color === 'black' ? '#111827' : '#16a34a';
                 rCtx.fill();
+                const mid = start + (sliceAngle / 2);
+                rCtx.save();
+                rCtx.translate(cx + Math.cos(mid) * (r - 18), cy + Math.sin(mid) * (r - 18));
+                rCtx.rotate(mid + Math.PI / 2);
+                rCtx.fillStyle = '#fff';
+                rCtx.font = '9px sans-serif';
+                rCtx.fillText(String(entry.n), -6, 0);
+                rCtx.restore();
             });
             rCtx.fillStyle = '#fff';
             rCtx.beginPath();
@@ -942,7 +1105,10 @@
         function spinRoulette() {
             const bet = getBetValue('roulette-bet');
             if (!spendTokens(bet, 'roulette-result', 'la roulette')) return;
-            const idx = Math.floor(Math.random() * rouletteNumbers.length);
+            const losingIndexes = rouletteNumbers.map((n, i) => ({ n, i })).filter(({ n }) => !rouletteWin(n, rouletteBetType)).map(({ i }) => i);
+            const idx = (Math.random() < 0.65 && losingIndexes.length)
+                ? losingIndexes[Math.floor(Math.random() * losingIndexes.length)]
+                : Math.floor(Math.random() * rouletteNumbers.length);
             const sliceAngle = (Math.PI * 2) / rouletteNumbers.length;
             const targetAngle = (Math.PI * 8) + ((rouletteNumbers.length - idx) * sliceAngle);
             const startAngle = rouletteAngle;
@@ -1035,7 +1201,7 @@
             const p = handValue(bjPlayer), d = handValue(bjDealer);
             let msg = 'Égalité.';
             if (p > 21) msg = 'Bust, perdu.';
-            else if (d > 21 || p > d) { payoutTokens(bjBet * 2); msg = `Gagné ! +${bjBet * 2} jetons`; }
+            else if (d > 21 || p > d) { payoutTokens(bjBet * 2); msg = `Gagné ! +${bjBet * 2} jetons`; rewardCompletion('blackjackWin', 60, 'première victoire Blackjack'); }
             else if (p < d) msg = 'Perdu.';
             else { payoutTokens(bjBet); msg = `Push, mise remboursée (+${bjBet}).`; }
             document.getElementById('blackjack-result').innerText = msg;
@@ -1050,6 +1216,18 @@
             return Number(value);
         }
 
+        function handStrength(cards) {
+            const ranks = cards.map(cardRank).sort((a, b) => b - a);
+            const counts = {};
+            ranks.forEach(r => counts[r] = (counts[r] || 0) + 1);
+            const groups = Object.entries(counts).map(([rank, count]) => ({ rank: Number(rank), count }))
+                .sort((a, b) => b.count - a.count || b.rank - a.rank);
+            const score = groups[0].count === 3 ? 300 + groups[0].rank
+                : groups[0].count === 2 ? 200 + groups[0].rank
+                : 100 + ranks[0];
+            return { score, groups, ranks };
+        }
+
         function playPokerUltimate() {
             if (!gameState.unlockedPoker) {
                 document.getElementById('poker-result').innerText = 'Poker Ultimate est verrouillé.';
@@ -1058,17 +1236,43 @@
             const bet = getBetValue('poker-bet');
             if (!spendTokens(bet, 'poker-result', 'Poker Ultimate')) return;
             const vals = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-            const player = vals[Math.floor(Math.random() * vals.length)];
-            const dealer = vals[Math.floor(Math.random() * vals.length)];
-            const pr = cardRank(player), dr = cardRank(dealer);
-            if (pr > dr) {
-                payoutTokens(bet * 2);
-                document.getElementById('poker-result').innerText = `Toi: ${player} vs Banque: ${dealer} → gagné +${bet * 2}`;
-            } else if (pr === dr) {
+            const draw = () => [0, 0, 0].map(() => vals[Math.floor(Math.random() * vals.length)]);
+            const player = draw();
+            const dealer = draw();
+            const ps = handStrength(player), ds = handStrength(dealer);
+            if (ps.score > ds.score) {
+                const bonus = ps.score >= 300 ? 4 : ps.score >= 200 ? 3 : 2;
+                payoutTokens(bet * bonus);
+                document.getElementById('poker-result').innerText = `Toi: ${player.join('-')} vs Banque: ${dealer.join('-')} → gagné x${bonus} (+${bet * bonus})`;
+            } else if (ps.score === ds.score) {
                 payoutTokens(bet);
-                document.getElementById('poker-result').innerText = `Toi: ${player} vs Banque: ${dealer} → égalité, mise remboursée.`;
+                document.getElementById('poker-result').innerText = `Toi: ${player.join('-')} vs Banque: ${dealer.join('-')} → égalité, mise remboursée.`;
             } else {
-                document.getElementById('poker-result').innerText = `Toi: ${player} vs Banque: ${dealer} → perdu.`;
+                document.getElementById('poker-result').innerText = `Toi: ${player.join('-')} vs Banque: ${dealer.join('-')} → perdu.`;
+            }
+        }
+
+        function playClassicPoker() {
+            const bet = getBetValue('classic-poker-bet');
+            if (!spendTokens(bet, 'classic-poker-result', 'le poker classique')) return;
+            const vals = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+            const suits = ['♠','♥','♦','♣'];
+            const deck = [];
+            suits.forEach(suit => vals.forEach(v => deck.push(`${v}${suit}`)));
+            deck.sort(() => Math.random() - 0.5);
+            const player = deck.splice(0, 5).map(c => c.slice(0, -1));
+            const dealer = deck.splice(0, 5).map(c => c.slice(0, -1));
+            const ps = handStrength(player);
+            const ds = handStrength(dealer);
+            if (ps.score > ds.score) {
+                payoutTokens(bet * 2);
+                document.getElementById('classic-poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → gagné +${bet * 2}`;
+                rewardCompletion('classicPoker', 80, 'première victoire au poker classique');
+            } else if (ps.score === ds.score) {
+                payoutTokens(bet);
+                document.getElementById('classic-poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → égalité.`;
+            } else {
+                document.getElementById('classic-poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → perdu.`;
             }
         }
 
@@ -1082,6 +1286,15 @@
         const dCanv = document.getElementById('dodge-canvas');
         const dCtx = dCanv.getContext('2d');
         let player = { x: 300, y: 200, size: 15 }, enemies = [], dTime = 0, lastTick = Date.now();
+
+        function resetDodge(manual = false) {
+            dTime = 0;
+            enemies = [];
+            player.x = 300;
+            player.y = 200;
+            document.getElementById('dodge-score').innerText = '0';
+
+        }
 
         dCanv.addEventListener('mousemove', e => {
             const rect = dCanv.getBoundingClientRect();
@@ -1118,8 +1331,8 @@
                     // Hit detection
                     let dist = Math.hypot(player.x - e.x, player.y - e.y);
                     if (dist < (player.size/2 + e.size/2)) {
-                        dTime = 0; enemies = []; 
-                        alert("YOU DIED!\nTry again — your progression is kept.");
+                        triggerRetroDeathPopup('Swarm Survival');
+                        resetDodge();
                         return;
                     }
                     if (e.x < -50 || e.x > 650 || e.y < -50 || e.y > 450) enemies.splice(i, 1);
@@ -1127,7 +1340,8 @@
 
                 if (dTime >= 30000) {
                     alert("YOU DID IT! You survived the swarm and beat the game!");
-                    dTime = 0; enemies = [];
+                    rewardCompletion('swarm', 250, 'Swarm Survival terminé');
+                    resetDodge();
                 }
             } else { lastTick = Date.now(); } 
             requestAnimationFrame(dodgeLoop);
