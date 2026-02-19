@@ -245,7 +245,7 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>SWARM SURVIVAL</h2>
-                <p class="warning-text">⚠️ WIN OR GO BACK TO THE BEGINNING ⚠️</p>
+                <p class="warning-text">⚠️ DODGE THE SWARM ⚠️</p>
                 <p>Move your mouse to control the blue square. DODGE the red swarm. Survive 30 seconds.</p>
                 <h3 style="color:var(--gold)">Time: <span id="dodge-score">0</span>s / 30s</h3>
             </div>
@@ -948,7 +948,7 @@
         drawBlackjack(false);
 
         // ==========================================
-        // MINIGAME 3: SWARM SURVIVAL (Brutal Mode)
+        // MINIGAME 3: SWARM SURVIVAL
         // ==========================================
         const dCanv = document.getElementById('dodge-canvas');
         const dCtx = dCanv.getContext('2d');
@@ -959,40 +959,22 @@
             player.x = e.clientX - rect.left; player.y = e.clientY - rect.top;
         });
 
-        function resetMinigameProgress() {
-            gameState.unlockedMemory = false;
-            gameState.unlockedFlappy = false;
-            gameState.unlockedFinal = false;
-            gameState.memorySolved = false;
-            gameState.memoryAttempts = 0;
-            gameState.tetrisHigh = 0;
-            gameState.flappyHigh = 0;
-            document.getElementById('tetris-score').innerText = "0";
-            document.getElementById('flappy-score').innerText = "0";
-            initMemoryGame();
-            checkUnlocks();
-            saveGame();
-            
-            // Boot player back to Tetris tab
-            switchTab('screen-tetris', document.getElementById('btn-tetris'));
-        }
-
         function dodgeLoop() {
             if (currentActiveTab === 'screen-final') {
                 const now = Date.now(); const dt = now - lastTick; lastTick = now;
                 dTime += dt;
                 document.getElementById('dodge-score').innerText = (dTime / 1000).toFixed(1);
 
-                // Make it harder: Spawn rate increases dramatically as time goes on
-                let spawnRate = 0.1 + (dTime / 30000) * 0.5;
+                // Progressive, but fair, difficulty curve
+                let spawnRate = 0.04 + (dTime / 30000) * 0.18;
 
                 if(Math.random() < spawnRate) { 
                     let side = Math.floor(Math.random()*4);
                     let x = side%2===0 ? Math.random()*600 : (side===1?600:0);
                     let y = side%2!==0 ? Math.random()*400 : (side===0?0:400);
                     let angle = Math.atan2(player.y - y, player.x - x);
-                    // Enemies also get slightly faster over time
-                    let speed = 3 + (dTime / 30000) * 3;
+                    // Enemies become faster over time, but less aggressively
+                    let speed = 2 + (dTime / 30000) * 1.6;
                     enemies.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, size: 8 });
                 }
 
@@ -1004,13 +986,12 @@
                     e.x += e.vx; e.y += e.vy;
                     dCtx.fillStyle = '#cf6679'; dCtx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
                     
-                    // Hit detection - THE PUNISHMENT
+                    // Hit detection
                     let dist = Math.hypot(player.x - e.x, player.y - e.y);
                     if (dist < (player.size/2 + e.size/2)) {
                         dTime = 0; enemies = []; 
-                        alert("YOU DIED!\nThe Swarm consumed you. Your minigame progress has been wiped. Back to Tetris you go!");
-                        resetMinigameProgress();
-                        return; // Exit out of the loop iteration to prevent bugs
+                        alert("YOU DIED!\nTry again — your progression is kept.");
+                        return;
                     }
                     if (e.x < -50 || e.x > 650 || e.y < -50 || e.y > 450) enemies.splice(i, 1);
                 }
