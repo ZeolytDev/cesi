@@ -10,26 +10,34 @@
             --bg: #121212; --panel: #1e1e1e; --accent: #bb86fc;
             --gold: #ffd700; --red: #cf6679; --green: #03dac6;
             --text: #ffffff; --text-sec: #b0b0b0;
+            --panel-soft: #25293a;
+            --border-soft: rgba(187, 134, 252, 0.28);
         }
 
         body {
             margin: 0; padding: 0; font-family: 'Roboto', 'Segoe UI', sans-serif;
-            background-color: var(--bg); color: var(--text);
+            background: radial-gradient(circle at top, #1f263c 0%, #121212 45%);
+            color: var(--text);
             height: 100vh; overflow: hidden; user-select: none; display: flex; flex-direction: column;
         }
 
         /* --- TABS NAVIGATION --- */
         #tabs-bar {
-            display: flex; background: #000; padding: 10px 20px;
-            border-bottom: 2px solid #333; gap: 10px; z-index: 5;
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border-soft); gap: 10px; z-index: 5;
         }
+        .tabs-group { display: flex; flex-wrap: wrap; gap: 10px; }
         .tab-btn {
-            background: #222; color: var(--text-sec); border: 1px solid #444;
+            background: #222837; color: var(--text-sec); border: 1px solid #444c61;
             padding: 10px 20px; border-radius: 5px; cursor: pointer;
             font-weight: bold; transition: 0.3s;
         }
-        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
-        .tab-btn:hover:not(.active) { background: #333; color: white; }
+        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); box-shadow: 0 0 16px rgba(187, 134, 252, 0.45); }
+        .tab-btn:hover:not(.active) { background: #31364b; color: white; }
+        .tab-btn.logout { background: transparent; color: #ff8f9f; border-color: rgba(255, 143, 159, 0.6); }
+        .tab-btn.logout:hover { background: rgba(255, 143, 159, 0.15); }
         .hidden { display: none !important; }
 
         /* --- SCREENS --- */
@@ -39,8 +47,8 @@
         /* --- CLICKER LAYOUT --- */
         #game-layer { display: flex; width: 100%; height: 100%; transition: filter 0.5s ease; }
         .blurred { filter: blur(20px); pointer-events: none; }
-        .game-area { flex: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #2c2c2c 0%, #121212 80%); position: relative; }
-        .shop-area { flex: 4; background: var(--panel); display: flex; flex-direction: column; border-left: 2px solid #333; max-width: 450px; }
+        .game-area { flex: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #2f3855 0%, #121212 78%); position: relative; }
+        .shop-area { flex: 4; background: linear-gradient(170deg, #1e1e2c 0%, #151723 100%); display: flex; flex-direction: column; border-left: 1px solid var(--border-soft); max-width: 450px; }
 
         /* --- GAME ELEMENTS --- */
         .header-stats { text-align: center; margin-bottom: 20px; z-index: 2; }
@@ -52,17 +60,17 @@
         .goal-text { color: var(--red); font-weight: bold; margin-top: 20px; font-size: 1.1rem; }
 
         /* --- SHOP & ADMIN --- */
-        .shop-header { padding: 20px; background: #252525; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .shop-header { padding: 20px; background: var(--panel-soft); border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center; }
         .shop-content { flex: 1; overflow-y: auto; padding: 10px; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1e1e1e; }
         ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
-        .shop-item { background: #2c2c2c; margin-bottom: 8px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: all 0.2s; }
-        .shop-item:hover { transform: translateX(-5px); background: #333; }
+        .shop-item { background: #2a3042; margin-bottom: 8px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: all 0.2s; }
+        .shop-item:hover { transform: translateX(-4px); background: #333b52; border-color: var(--border-soft); }
         .item-info h4 { margin: 0; font-size: 1rem; color: var(--text); }
         .item-info p { margin: 4px 0 0; font-size: 0.75rem; color: var(--text-sec); }
         .item-cost { font-weight: bold; color: var(--gold); }
-        .buy-btn { background: #333; border: 1px solid #555; color: white; padding: 8px 12px; border-radius: 5px; cursor: pointer; min-width: 80px; transition: 0.2s; }
+        .buy-btn { background: #202735; border: 1px solid #555; color: white; padding: 8px 12px; border-radius: 5px; cursor: pointer; min-width: 80px; transition: 0.2s; }
         .can-buy { background: var(--green); color: black; border-color: var(--green); font-weight: bold; }
         .locked { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
         #ascend-btn { width: 100%; padding: 20px; background: linear-gradient(45deg, #e94560, #c0392b); color: white; border: none; font-weight: bold; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; display: none; }
@@ -80,9 +88,9 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         /* --- LOGIN MODAL --- */
-        #login-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.8); z-index: 10; }
-        .card { background: var(--panel); padding: 40px; border-radius: 10px; text-align: center; border: 1px solid #444; width: 300px; }
-        input { width: 90%; padding: 10px; margin: 10px 0; background: #121212; border: 1px solid #333; color: white; border-radius: 5px; }
+        #login-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(6,8,14,0.8); z-index: 10; }
+        .card { background: linear-gradient(170deg, #202434 0%, #161a28 100%); padding: 40px; border-radius: 14px; text-align: center; border: 1px solid var(--border-soft); width: 320px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35); }
+        input { width: 90%; padding: 10px; margin: 10px 0; background: #121726; border: 1px solid #39415a; color: white; border-radius: 5px; }
         .btn-main { width: 100%; padding: 12px; background: var(--accent); color: black; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     </style>
 </head>
@@ -99,10 +107,13 @@
     </div>
 
     <div id="tabs-bar" class="hidden">
-        <button id="btn-clicker" class="tab-btn active" onclick="switchTab('screen-clicker', this)">Main Terminal</button>
-        <button id="btn-tetris" class="tab-btn hidden" onclick="switchTab('screen-tetris', this)">Tetris (Score: <span id="tetris-high">0</span>/1000)</button>
-        <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/50)</button>
-        <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
+        <div class="tabs-group">
+            <button id="btn-clicker" class="tab-btn active" onclick="switchTab('screen-clicker', this)">Main Terminal</button>
+            <button id="btn-tetris" class="tab-btn hidden" onclick="switchTab('screen-tetris', this)">Tetris (Score: <span id="tetris-high">0</span>/1000)</button>
+            <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/50)</button>
+            <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
+        </div>
+        <button class="tab-btn logout" onclick="logout()">Se déconnecter</button>
     </div>
 
     <div id="screen-clicker" class="screen active">
@@ -222,6 +233,20 @@
                 if (!response.ok) throw new Error("Invalid credentials");
                 await startGame(await response.json());
             } catch (error) { statusText.innerText = "Login Failed"; }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`${BASE_URL}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+            } catch (error) {
+                console.warn('Logout request failed, clearing local session only.');
+            }
+
+            currentUser = null;
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('game-layer').classList.add('blurred');
+            document.getElementById('tabs-bar').classList.add('hidden');
+            document.getElementById('login-status').innerText = "Session closed. Please log in.";
         }
 
         async function startGame(data) {
@@ -448,7 +473,7 @@
 
         function clearLines() {
             outer: for (let y = ROWS - 1; y >= 0; --y) {
-                for (let x = 0; x < COLS; ++x) if (b[y][x] === 0) continue outer;
+                for (let x = 0; x < COLS; ++x) if (board[y][x] === 0) continue outer;
                 const row = board.splice(y, 1)[0].fill(0);
                 board.unshift(row); ++y; tScore += 100;
                 if(tScore > gameState.tetrisHigh) { gameState.tetrisHigh = tScore; checkUnlocks(); }
@@ -465,7 +490,8 @@
                     lastDrop = Date.now();
                 }
                 tCtx.fillStyle = '#000'; tCtx.fillRect(0,0, tCanv.width, tCanv.height);
-                drawMatrix(board, 0, 0); drawMatrix(piece.matrix, piece.x, piece.y);
+                drawMatrix(board, 0, 0);
+                if (piece) drawMatrix(piece.matrix, piece.x, piece.y);
             }
             requestAnimationFrame(tetrisLoop);
         }
@@ -518,10 +544,12 @@
                     fCtx.fillRect(p.x, 0, 40, p.gap); 
                     fCtx.fillRect(p.x, p.gap + 120, 40, 480); 
                     
-                    if (50 < p.x + 40 && 50 + bird.size > p.x && (bird.y < p.gap || bird.y + bird.size > p.gap + 120) || bird.y > 480) {
-                        fScore = 0; bird.y = 240; pipes = []; fFrames = 0; 
+                    if ((50 < p.x + 40 && 50 + bird.size > p.x && (bird.y < p.gap || bird.y + bird.size > p.gap + 120)) || bird.y > 480 || bird.y < -bird.size) {
+                        fScore = 0; bird.y = 240; bird.v = 0; pipes = []; fFrames = 0; 
+                        document.getElementById('flappy-score').innerText = '0';
                     }
-                    if (p.x === 40) {
+                    if (!p.passed && p.x + 40 < 50) {
+                        p.passed = true;
                         fScore++; document.getElementById('flappy-score').innerText = fScore;
                         if(fScore > gameState.flappyHigh) { gameState.flappyHigh = fScore; checkUnlocks(); }
                     }
