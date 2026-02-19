@@ -641,7 +641,8 @@
                 
                 gameState.unlockedTetris = data.gameState.unlockedTetris || false;
                 gameState.unlockedMemory = data.gameState.unlockedMemory || false;
-                gameState.unlockedPlatformer = data.gameState.unlockedPlatformer || false;
+                // Backward-compat: some saves may still carry the old typo "unlockedPlateformer".
+                gameState.unlockedPlatformer = Boolean(data.gameState.unlockedPlatformer ?? data.gameState.unlockedPlateformer ?? false);
                 gameState.unlockedFlappy = data.gameState.unlockedFlappy || false;
                 gameState.unlockedMotus = data.gameState.unlockedMotus || false;
                 gameState.unlockedFinal = data.gameState.unlockedFinal || false;
@@ -661,6 +662,14 @@
                 gameState.adsRemoved = Boolean(data.gameState.adsRemoved ?? false);
                 if (!gameState.adsRemoved && readLocalAdRemoval()) {
                     gameState.adsRemoved = true;
+                }
+
+                // Migration safety: if Memory progress exists, keep Platformer unlocked after code updates.
+                if ((gameState.memoryMatched || 0) >= 25) {
+                    gameState.memorySolved = true;
+                }
+                if (gameState.memorySolved || gameState.platformerSolved) {
+                    gameState.unlockedPlatformer = true;
                 }
 
                 persistLocalAdRemoval(gameState.adsRemoved);
