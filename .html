@@ -201,6 +201,25 @@
         .memory-card.revealed, .memory-card.matched { background:#03dac6; color:#111; }
         .memory-card.matched { cursor:default; opacity:.85; }
 
+        .poker-table-visual {
+            width: min(95vw, 760px);
+            background: radial-gradient(circle at center, #0f6b44 0%, #08422a 66%, #052817 100%);
+            border: 2px solid rgba(255, 215, 0, 0.45);
+            border-radius: 26px;
+            padding: 16px;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.05), 0 14px 30px rgba(0,0,0,0.45);
+        }
+        .poker-row { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+        .poker-row strong { color: #fdf3c7; min-width: 90px; text-align: right; }
+        .poker-cards { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+        .poker-card {
+            width: 54px; height: 78px; border-radius: 8px; border: 1px solid #d3d6dd;
+            background: #f8fafc; color: #111827; display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.05rem;
+        }
+        .poker-card.red { color: #b91c1c; }
+        .poker-card.back { background: repeating-linear-gradient(45deg, #1d4ed8, #1d4ed8 6px, #0f172a 6px, #0f172a 12px); color: #fff; border-color: #0f172a; }
+
         @media (max-width: 900px) {
             .relax-lounge { grid-template-columns: 1fr; }
             .relax-menu { position: static; }
@@ -235,7 +254,7 @@
             <button id="btn-motus" class="tab-btn hidden" onclick="switchTab('screen-motus', this)">Motus (Série: <span id="motus-best">0</span>)</button>
             <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
             <button id="btn-relax" class="tab-btn" onclick="switchTab('screen-relax', this)">Espace détente</button>
-            <button id="btn-poker" class="tab-btn hidden" onclick="switchTab('screen-poker', this)">Poker Ultimate</button>
+            <button id="btn-poker" class="tab-btn hidden" onclick="switchTab('screen-poker', this)">Poker classique</button>
             <button id="btn-resume" class="tab-btn resume hidden" onclick="resumePausedTab()">▶ Reprendre la partie</button>
         </div>
         <button class="tab-btn logout" onclick="logout()">Se déconnecter</button>
@@ -297,7 +316,7 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>MEMORY - 50 CARTES</h2>
-                <p>Trouve les 25 paires d'émojis pour déverrouiller Flappy Bird.</p>
+                <p>Trouve les 25 paires d'émojis pour déverrouiller Platformer.</p>
                 <h3 style="color:var(--gold)">Paires: <span id="memory-matched">0</span>/25</h3>
                 <h3>Essais: <span id="memory-attempts">0</span></h3>
             </div>
@@ -323,7 +342,7 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>FLAPPY BIRD</h2>
-                <p>Click or Spacebar to jump. Reach 20 to unlock the final challenge.</p>
+                <p>Click or Spacebar to jump. Reach 20 to unlock Motus.</p>
                 <h3 style="color:var(--gold)">Score: <span id="flappy-score">0</span></h3>
             </div>
             <canvas id="flappy-canvas" width="320" height="480"></canvas>
@@ -354,7 +373,7 @@
                 <h2>ESPACE DÉTENTE 🎰🃏</h2>
                 <p>Choisis ton ambiance et navigue entre les jeux depuis le menu lounge.</p>
                 <h3 style="color:var(--gold)">Jetons: <span id="slot-tokens">50</span></h3>
-                <p id="poker-unlock-hint">Atteins 1000 jetons pour débloquer Poker Ultimate.</p>
+                <p id="poker-unlock-hint">Poker classique verrouillé pour le moment.</p>
             </div>
             <div class="relax-lounge">
                 <aside class="relax-menu">
@@ -391,11 +410,10 @@
                                 </div>
                             </div>
                             <div class="relax-card">
-                                <h3>Poker</h3>
-                                <p id="classic-poker-result">5 cartes contre la banque, meilleure combinaison gagne.</p>
+                                <h3>Poker classique</h3>
+                                <p>Utilise la table dédiée avec cartes visuelles.</p>
                                 <div class="actions-row">
-                                    <input id="classic-poker-bet" type="number" min="1" value="20" style="width:100px" />
-                                    <button class="buy-btn" onclick="playClassicPoker()">Distribuer</button>
+                                    <button class="buy-btn" onclick="switchTab('screen-poker', document.getElementById('btn-poker'))">Ouvrir la table</button>
                                 </div>
                             </div>
                             <div class="relax-card">
@@ -443,18 +461,18 @@
     <div id="screen-poker" class="screen">
         <div class="canvas-container">
             <div class="minigame-ui">
-                <h2>POKER TEXAS HOLD'EM ♠️</h2>
-                <p>Vraie table: pré-flop, flop, turn, river contre deux robots.</p>
+                <h2>POKER CLASSIQUE ♠️</h2>
+                <p>5 cartes contre la banque avec table visuelle.</p>
                 <h3 style="color:var(--gold)">Jetons: <span id="poker-tokens">50</span></h3>
             </div>
-            <div class="relax-card" style="width:min(95vw, 640px)">
-                <h3>Table principale</h3>
-                <p id="poker-result">Lance une main pour démarrer le pré-flop.</p>
-                <p id="poker-table">-</p>
+            <div class="poker-table-visual">
+                <h3 style="margin-top:0">Table principale</h3>
+                <p id="poker-result">Lance une main pour distribuer 5 cartes.</p>
+                <div class="poker-row"><strong>Toi</strong><div id="poker-hero" class="poker-cards"></div></div>
+                <div class="poker-row"><strong>Banque</strong><div id="poker-dealer" class="poker-cards"></div></div>
                 <div class="actions-row">
                     <input id="poker-bet" type="number" min="1" value="25" style="width:100px" />
-                    <button class="buy-btn can-buy" onclick="startPokerHand()">Distribuer</button>
-                    <button class="buy-btn" onclick="advancePokerRound()">Tour suivant</button>
+                    <button class="buy-btn can-buy" onclick="playClassicPoker()">Distribuer</button>
                 </div>
             </div>
         </div>
@@ -734,7 +752,7 @@
 
             if (gameState.tetrisHigh >= 1000) gameState.unlockedMemory = true;
             if (gameState.memorySolved) gameState.unlockedPlatformer = true;
-            if (gameState.memorySolved && gameState.platformerSolved) gameState.unlockedFlappy = true;
+            if (gameState.platformerSolved) gameState.unlockedFlappy = true;
             if (gameState.flappyHigh >= 20) gameState.unlockedMotus = true;
             if (gameState.motusSolved) gameState.unlockedFinal = true;
 
@@ -756,9 +774,9 @@
             if (gameState.unlockedFinal) document.getElementById('btn-final').classList.remove('hidden');
             else document.getElementById('btn-final').classList.add('hidden');
 
-            if (gameState.slotTokens >= 1000) gameState.unlockedPoker = true;
+            if (gameState.unlockedMotus) gameState.unlockedPoker = true;
             document.getElementById('btn-poker').classList.toggle('hidden', !gameState.unlockedPoker);
-            document.getElementById('poker-unlock-hint').innerText = gameState.unlockedPoker ? 'Poker Ultimate débloqué ✅' : 'Atteins 1000 jetons pour débloquer Poker Ultimate.';
+            document.getElementById('poker-unlock-hint').innerText = gameState.unlockedPoker ? 'Poker classique débloqué ✅' : 'Termine Motus pour débloquer le poker classique.';
             document.getElementById('tetris-high').innerText = gameState.tetrisHigh;
             document.getElementById('flappy-high').innerText = gameState.flappyHigh;
             document.getElementById('memory-best').innerText = gameState.memoryMatched || 0;
@@ -833,6 +851,7 @@
             document.getElementById('retro-banner').classList.add('hidden');
             msgEl.innerText = 'Pubs retirées avec succès ✅';
             checkUnlocks();
+            saveGame();
         }
 
         function refreshDonationUsers() {
@@ -1251,7 +1270,7 @@
                 if (platPlayer.y > pCanv.height + 40) resetPlatformer();
                 if (platPlayer.x > 560 && platPlayer.y < 120 && !gameState.platformerSolved) {
                     gameState.platformerSolved = true;
-                    gameState.unlockedFlappy = gameState.memorySolved;
+                    gameState.unlockedFlappy = true;
                     checkUnlocks();
                     document.getElementById('platformer-status').innerText = 'Niveau validé ✅';
                     document.getElementById('slot-result').innerText = 'Platformer réussi, progression vers Flappy !';
@@ -1596,140 +1615,57 @@
             return { score, groups, ranks };
         }
 
-        function playClassicPoker() {
-            const bet = getBetValue('classic-poker-bet');
-            if (!spendTokens(bet, 'classic-poker-result', 'le poker classique')) return;
+        function createPokerDeck() {
             const vals = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
             const suits = ['♠','♥','♦','♣'];
             const deck = [];
             suits.forEach(suit => vals.forEach(v => deck.push(`${v}${suit}`)));
-            deck.sort(() => Math.random() - 0.5);
+            return deck.sort(() => Math.random() - 0.5);
+        }
+
+        function renderPokerCards(containerId, cards = [], hidden = false) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (!cards.length) {
+                container.innerHTML = '<div class="poker-card back">🂠</div><div class="poker-card back">🂠</div><div class="poker-card back">🂠</div><div class="poker-card back">🂠</div><div class="poker-card back">🂠</div>';
+                return;
+            }
+            container.innerHTML = cards.map(card => {
+                if (hidden) return '<div class="poker-card back">🂠</div>';
+                const suit = card.slice(-1);
+                const red = (suit === '♥' || suit === '♦') ? ' red' : '';
+                return `<div class="poker-card${red}">${card}</div>`;
+            }).join('');
+        }
+
+        function playClassicPoker() {
+            if (!gameState.unlockedPoker) {
+                document.getElementById('poker-result').innerText = 'Poker classique verrouillé.';
+                return;
+            }
+            const bet = getBetValue('poker-bet');
+            if (!spendTokens(bet, 'poker-result', 'le poker classique')) return;
+            const deck = createPokerDeck();
             const player = deck.splice(0, 5).map(c => c.slice(0, -1));
             const dealer = deck.splice(0, 5).map(c => c.slice(0, -1));
             const ps = handStrength(player);
             const ds = handStrength(dealer);
+            renderPokerCards('poker-hero', player);
+            renderPokerCards('poker-dealer', dealer);
             if (ps.score > ds.score) {
                 payoutTokens(bet * 2);
-                document.getElementById('classic-poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → gagné +${bet * 2}`;
+                document.getElementById('poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → gagné +${bet * 2}`;
                 rewardCompletion('classicPoker', 80, 'première victoire au poker classique');
             } else if (ps.score === ds.score) {
                 payoutTokens(bet);
-                document.getElementById('classic-poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → égalité.`;
+                document.getElementById('poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → égalité.`;
             } else {
-                document.getElementById('classic-poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → perdu.`;
+                document.getElementById('poker-result').innerText = `Main: ${player.join(' ')} | Banque: ${dealer.join(' ')} → perdu.`;
             }
         }
 
-        const pokerBots = ['Robot Alpha', 'Robot Beta'];
-        let pokerState = { phase: 'idle', deck: [], bet: 0, hero: [], bots: [[], []], community: [] };
-        function createDeck() {
-            const vals = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-            const suits = ['♠','♥','♦','♣'];
-            const d = [];
-            suits.forEach(s => vals.forEach(v => d.push({ v, s })));
-            return d.sort(() => Math.random() - 0.5);
-        }
-        function cardLabel(c) { return `${c.v}${c.s}`; }
-
-        function evaluateSeven(cards) {
-            const ranks = cards.map(c => cardRank(c.v)).sort((a, b) => b - a);
-            const countByRank = {};
-            const countBySuit = {};
-            cards.forEach(c => {
-                const r = cardRank(c.v);
-                countByRank[r] = (countByRank[r] || 0) + 1;
-                countBySuit[c.s] = (countBySuit[c.s] || 0) + 1;
-            });
-            const pairs = Object.entries(countByRank).filter(([, n]) => n === 2).map(([r]) => Number(r)).sort((a,b)=>b-a);
-            const trips = Object.entries(countByRank).filter(([, n]) => n === 3).map(([r]) => Number(r)).sort((a,b)=>b-a);
-            const quads = Object.entries(countByRank).filter(([, n]) => n === 4).map(([r]) => Number(r)).sort((a,b)=>b-a);
-            const unique = [...new Set(ranks)].sort((a,b)=>b-a);
-            if (unique[0] === 14) unique.push(1);
-            let straightHigh = 0;
-            for (let i = 0; i <= unique.length - 5; i++) {
-                if (unique[i] - unique[i+4] === 4) { straightHigh = Math.max(straightHigh, unique[i]); break; }
-            }
-            let flushSuit = null;
-            Object.entries(countBySuit).forEach(([s, n]) => { if (n >= 5) flushSuit = s; });
-            let straightFlushHigh = 0;
-            if (flushSuit) {
-                const fr = cards.filter(c => c.s === flushSuit).map(c => cardRank(c.v));
-                const fu = [...new Set(fr)].sort((a,b)=>b-a);
-                if (fu[0] === 14) fu.push(1);
-                for (let i = 0; i <= fu.length - 5; i++) if (fu[i] - fu[i+4] === 4) { straightFlushHigh = fu[i]; break; }
-            }
-            if (straightFlushHigh) return 900 + straightFlushHigh;
-            if (quads.length) return 800 + quads[0];
-            if (trips.length && (pairs.length || trips.length > 1)) return 700 + trips[0];
-            if (flushSuit) return 600 + Math.max(...cards.filter(c => c.s === flushSuit).map(c => cardRank(c.v)));
-            if (straightHigh) return 500 + straightHigh;
-            if (trips.length) return 400 + trips[0];
-            if (pairs.length >= 2) return 300 + pairs[0] * 0.1 + pairs[1] * 0.01;
-            if (pairs.length) return 200 + pairs[0];
-            return 100 + Math.max(...ranks);
-        }
-
-        function renderPokerTable() {
-            const board = pokerState.community.map(cardLabel).join(' ');
-            const hero = pokerState.hero.map(cardLabel).join(' ');
-            const bots = pokerState.bots.map((h, i) => `${pokerBots[i]}: ${pokerState.phase === 'showdown' ? h.map(cardLabel).join(' ') : '🂠 🂠'}`).join(' | ');
-            document.getElementById('poker-table').innerText = `Board: ${board || '-'}
-Toi: ${hero || '-'}
-${bots}
-Phase: ${pokerState.phase}`;
-        }
-
-        function startPokerHand() {
-            if (!gameState.unlockedPoker) {
-                document.getElementById('poker-result').innerText = 'Poker Ultimate est verrouillé.';
-                return;
-            }
-            const bet = getBetValue('poker-bet');
-            if (!spendTokens(bet, 'poker-result', 'la table de poker')) return;
-            const deck = createDeck();
-            pokerState = {
-                phase: 'preflop',
-                deck,
-                bet,
-                hero: [deck.pop(), deck.pop()],
-                bots: [[deck.pop(), deck.pop()], [deck.pop(), deck.pop()]],
-                community: []
-            };
-            document.getElementById('poker-result').innerText = 'Pré-flop distribué. Clique sur "Tour suivant" pour le flop.';
-            renderPokerTable();
-        }
-
-        function advancePokerRound() {
-            if (pokerState.phase === 'idle') return;
-            if (pokerState.phase === 'preflop') {
-                pokerState.community.push(pokerState.deck.pop(), pokerState.deck.pop(), pokerState.deck.pop());
-                pokerState.phase = 'flop';
-                document.getElementById('poker-result').innerText = 'Flop révélé.';
-            } else if (pokerState.phase === 'flop') {
-                pokerState.community.push(pokerState.deck.pop());
-                pokerState.phase = 'turn';
-                document.getElementById('poker-result').innerText = 'Turn révélé.';
-            } else if (pokerState.phase === 'turn') {
-                pokerState.community.push(pokerState.deck.pop());
-                pokerState.phase = 'river';
-                document.getElementById('poker-result').innerText = 'River révélé. Encore un tour pour le showdown.';
-            } else if (pokerState.phase === 'river') {
-                const heroScore = evaluateSeven([...pokerState.hero, ...pokerState.community]);
-                const botScores = pokerState.bots.map(h => evaluateSeven([...h, ...pokerState.community]));
-                const topBot = Math.max(...botScores);
-                pokerState.phase = 'showdown';
-                if (heroScore > topBot) {
-                    payoutTokens(pokerState.bet * 4);
-                    document.getElementById('poker-result').innerText = `Showdown: gagné contre 2 robots ! +${pokerState.bet * 4} jetons.`;
-                } else if (heroScore === topBot) {
-                    payoutTokens(pokerState.bet);
-                    document.getElementById('poker-result').innerText = 'Showdown: égalité, mise remboursée.';
-                } else {
-                    document.getElementById('poker-result').innerText = 'Showdown: perdu contre les robots.';
-                }
-            }
-            renderPokerTable();
-        }
+        renderPokerCards('poker-hero', []);
+        renderPokerCards('poker-dealer', []);
         drawSlot();
         drawRoulette();
         drawBlackjack(false);
