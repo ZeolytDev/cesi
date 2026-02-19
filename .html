@@ -328,7 +328,8 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>PLATFORMER</h2>
-                <p>Utilise ← → pour bouger et Espace pour sauter. Atteins le drapeau vert.</p>
+                <p>Utilise ← → pour bouger et Espace pour sauter. Atteins le drapeau vert sur chaque niveau.</p>
+                <h3>Niveau: <span id="platformer-level">1</span>/3</h3>
                 <h3 style="color:var(--gold)">État: <span id="platformer-status">En cours...</span></h3>
             </div>
             <canvas id="platformer-canvas" width="600" height="260"></canvas>
@@ -1262,52 +1263,164 @@
         // ==========================================
         const pCanv = document.getElementById('platformer-canvas');
         const pCtx = pCanv.getContext('2d');
-        let platPlayer = { x: 20, y: 210, w: 16, h: 16, vx: 0, vy: 0, onGround: false };
         const platKeys = { left: false, right: false, jump: false };
-        const platPlatforms = [
-            { x: 0, y: 235, w: 600, h: 25 },
-            { x: 110, y: 200, w: 90, h: 12 },
-            { x: 250, y: 165, w: 90, h: 12 },
-            { x: 390, y: 130, w: 90, h: 12 },
-            { x: 520, y: 98, w: 70, h: 12 }
+        const platformerLevels = [
+            {
+                gravity: 0.32,
+                jump: -7.2,
+                speed: 2.5,
+                spawn: { x: 20, y: 205 },
+                finish: { x: 566, y: 52, h: 48 },
+                platforms: [
+                    { x: 0, y: 235, w: 600, h: 25, type: 'ground' },
+                    { x: 110, y: 200, w: 110, h: 12, type: 'stone' },
+                    { x: 260, y: 165, w: 90, h: 12, type: 'moss' },
+                    { x: 390, y: 130, w: 90, h: 12, type: 'stone' },
+                    { x: 520, y: 98, w: 70, h: 12, type: 'moss' }
+                ]
+            },
+            {
+                gravity: 0.35,
+                jump: -7.35,
+                speed: 2.8,
+                spawn: { x: 20, y: 205 },
+                finish: { x: 566, y: 44, h: 56 },
+                platforms: [
+                    { x: 0, y: 235, w: 150, h: 25, type: 'ground' },
+                    { x: 170, y: 205, w: 80, h: 12, type: 'stone' },
+                    { x: 285, y: 178, w: 75, h: 12, type: 'moss' },
+                    { x: 390, y: 148, w: 70, h: 12, type: 'stone' },
+                    { x: 485, y: 118, w: 65, h: 12, type: 'moss' },
+                    { x: 545, y: 90, w: 55, h: 12, type: 'stone' }
+                ]
+            },
+            {
+                gravity: 0.38,
+                jump: -7.5,
+                speed: 3.1,
+                spawn: { x: 20, y: 205 },
+                finish: { x: 566, y: 32, h: 68 },
+                platforms: [
+                    { x: 0, y: 235, w: 130, h: 25, type: 'ground' },
+                    { x: 150, y: 210, w: 62, h: 12, type: 'stone' },
+                    { x: 240, y: 184, w: 60, h: 12, type: 'moss' },
+                    { x: 332, y: 158, w: 56, h: 12, type: 'stone' },
+                    { x: 420, y: 132, w: 54, h: 12, type: 'moss' },
+                    { x: 500, y: 105, w: 52, h: 12, type: 'stone' },
+                    { x: 548, y: 80, w: 52, h: 12, type: 'moss' }
+                ]
+            }
         ];
-        function resetPlatformer() {
-            platPlayer = { x: 20, y: 210, w: 16, h: 16, vx: 0, vy: 0, onGround: false };
-            document.getElementById('platformer-status').innerText = gameState.platformerSolved ? 'Déjà réussi ✅' : 'En cours...';
+        let platLevelIndex = 0;
+        let platPlayer = { x: 20, y: 205, w: 22, h: 22, vx: 0, vy: 0, onGround: false, face: 1 };
+
+        function getCurrentPlatformerLevel() {
+            return platformerLevels[Math.min(platLevelIndex, platformerLevels.length - 1)];
         }
+
+        function resetPlatformer(levelIndex = platLevelIndex) {
+            platLevelIndex = Math.max(0, Math.min(levelIndex, platformerLevels.length - 1));
+            const level = getCurrentPlatformerLevel();
+            platPlayer = { x: level.spawn.x, y: level.spawn.y, w: 22, h: 22, vx: 0, vy: 0, onGround: false, face: 1 };
+            document.getElementById('platformer-level').innerText = `${platLevelIndex + 1}`;
+            document.getElementById('platformer-status').innerText = gameState.platformerSolved ? 'Déjà réussi ✅' : `Niveau ${platLevelIndex + 1} en cours...`;
+        }
+
+        function drawTexturedPlatform(pl) {
+            const colors = pl.type === 'moss'
+                ? ['#2f5f45', '#3a7b58', '#4da073']
+                : pl.type === 'ground'
+                    ? ['#3f3a52', '#5c5477', '#6d6290']
+                    : ['#4e4f60', '#70738d', '#8d91ad'];
+            pCtx.fillStyle = colors[0];
+            pCtx.fillRect(pl.x, pl.y, pl.w, pl.h);
+            pCtx.fillStyle = colors[1];
+            for (let i = 0; i < pl.w; i += 10) {
+                pCtx.fillRect(pl.x + i, pl.y, 5, pl.h);
+            }
+            pCtx.fillStyle = colors[2];
+            for (let i = 0; i < pl.w; i += 14) {
+                pCtx.fillRect(pl.x + i, pl.y + 2, 2, pl.h - 4);
+            }
+        }
+
+        function drawPlatformerPlayer() {
+            pCtx.save();
+            pCtx.translate(platPlayer.x + platPlayer.w / 2, platPlayer.y + platPlayer.h / 2);
+            pCtx.scale(platPlayer.face, 1);
+            pCtx.font = '20px sans-serif';
+            pCtx.textAlign = 'center';
+            pCtx.textBaseline = 'middle';
+            pCtx.fillText('🧙', 0, 0);
+            pCtx.restore();
+        }
+
+        function drawPlatformerBackground(levelNumber) {
+            const sky = pCtx.createLinearGradient(0, 0, 0, pCanv.height);
+            sky.addColorStop(0, '#1f355e');
+            sky.addColorStop(1, '#0b1122');
+            pCtx.fillStyle = sky;
+            pCtx.fillRect(0, 0, pCanv.width, pCanv.height);
+
+            pCtx.fillStyle = 'rgba(255,255,255,0.06)';
+            for (let i = 0; i < 16; i += 1) {
+                const x = ((i * 91) + (levelNumber * 17)) % pCanv.width;
+                const y = 25 + (i % 5) * 24;
+                pCtx.fillRect(x, y, 36, 10);
+            }
+
+            pCtx.fillStyle = 'rgba(255, 215, 0, 0.9)';
+            pCtx.beginPath();
+            pCtx.arc(60 + levelNumber * 12, 46, 14 - levelNumber * 2, 0, Math.PI * 2);
+            pCtx.fill();
+        }
+
         function platformerLoop() {
             if (currentActiveTab === 'screen-platformer') {
-                platPlayer.vx = (platKeys.right ? 2.4 : 0) - (platKeys.left ? 2.4 : 0);
-                platPlayer.vy += 0.32;
-                if (platKeys.jump && platPlayer.onGround) { platPlayer.vy = -7.2; platPlayer.onGround = false; }
+                const level = getCurrentPlatformerLevel();
+                platPlayer.vx = (platKeys.right ? level.speed : 0) - (platKeys.left ? level.speed : 0);
+                if (platPlayer.vx !== 0) platPlayer.face = platPlayer.vx > 0 ? 1 : -1;
+                platPlayer.vy += level.gravity;
+                if (platKeys.jump && platPlayer.onGround) { platPlayer.vy = level.jump; platPlayer.onGround = false; }
                 platPlayer.x += platPlayer.vx;
                 platPlayer.y += platPlayer.vy;
+                platPlayer.x = Math.max(0, Math.min(platPlayer.x, pCanv.width - platPlayer.w));
                 platPlayer.onGround = false;
-                platPlatforms.forEach(pl => {
+                level.platforms.forEach(pl => {
                     const hitX = platPlayer.x < pl.x + pl.w && platPlayer.x + platPlayer.w > pl.x;
-                    const hitY = platPlayer.y + platPlayer.h >= pl.y && platPlayer.y + platPlayer.h <= pl.y + 12;
+                    const hitY = platPlayer.y + platPlayer.h >= pl.y && platPlayer.y + platPlayer.h <= pl.y + 14;
                     if (hitX && hitY && platPlayer.vy >= 0) {
                         platPlayer.y = pl.y - platPlayer.h;
                         platPlayer.vy = 0;
                         platPlayer.onGround = true;
                     }
                 });
-                if (platPlayer.y > pCanv.height + 40) resetPlatformer();
-                if (platPlayer.x > 560 && platPlayer.y < 120 && !gameState.platformerSolved) {
-                    gameState.platformerSolved = true;
-                    gameState.unlockedFlappy = true;
-                    checkUnlocks();
-                    document.getElementById('platformer-status').innerText = 'Niveau validé ✅';
-                    document.getElementById('slot-result').innerText = 'Platformer réussi, progression vers Flappy !';
-                    rewardCompletion('platformer', 20, 'Platformer terminé');
+                if (platPlayer.y > pCanv.height + 40) resetPlatformer(platLevelIndex);
+
+                const reachedFlag = platPlayer.x + platPlayer.w > level.finish.x - 4 && platPlayer.y < level.finish.y + level.finish.h;
+                if (reachedFlag && !gameState.platformerSolved) {
+                    if (platLevelIndex < platformerLevels.length - 1) {
+                        platLevelIndex += 1;
+                        document.getElementById('platformer-level').innerText = `${platLevelIndex + 1}`;
+                        document.getElementById('platformer-status').innerText = `Niveau ${platLevelIndex} validé ✅ | Niveau ${platLevelIndex + 1}...`;
+                        resetPlatformer(platLevelIndex);
+                    } else {
+                        gameState.platformerSolved = true;
+                        gameState.unlockedFlappy = true;
+                        checkUnlocks();
+                        document.getElementById('platformer-status').innerText = 'Tous les niveaux validés ✅';
+                        document.getElementById('slot-result').innerText = 'Platformer maîtrisé, progression vers Flappy !';
+                        rewardCompletion('platformer', 20, 'Platformer terminé');
+                    }
                 }
 
-                pCtx.fillStyle = '#0e1528'; pCtx.fillRect(0, 0, pCanv.width, pCanv.height);
-                pCtx.fillStyle = '#34d399'; pCtx.fillRect(575, 52, 12, 48);
-                pCtx.fillStyle = '#6b7280';
-                platPlatforms.forEach(pl => pCtx.fillRect(pl.x, pl.y, pl.w, pl.h));
-                pCtx.fillStyle = '#60a5fa';
-                pCtx.fillRect(platPlayer.x, platPlayer.y, platPlayer.w, platPlayer.h);
+                drawPlatformerBackground(platLevelIndex + 1);
+                pCtx.fillStyle = '#34d399';
+                pCtx.fillRect(level.finish.x, level.finish.y, 12, level.finish.h);
+                pCtx.fillStyle = '#f8fafc';
+                pCtx.fillRect(level.finish.x, level.finish.y, 26, 12);
+                level.platforms.forEach(drawTexturedPlatform);
+                drawPlatformerPlayer();
             }
             requestAnimationFrame(platformerLoop);
         }
