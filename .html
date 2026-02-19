@@ -147,7 +147,7 @@
         <button class="tab-btn logout" onclick="logout()">Se déconnecter</button>
     </div>
 
-    <div id="ad-banner" class="ad-banner hidden"><span>🔥 De beaux hommes te recherchent proche de chez toi — soirée rétro, musique lente, scénario torride niveau 2010. Clique nulle part, c'est juste du lore.</span></div>
+    <div id="ad-banner" class="ad-banner hidden"><span id="ad-banner-text">🔥 De beaux hommes te recherchent proche de chez toi — soirée rétro, musique lente, scénario torride niveau 2010.</span></div>
 
     <div id="screen-clicker" class="screen active">
         <div id="game-layer" class="blurred">
@@ -276,10 +276,12 @@
                 <div class="relax-card">
                     <h3>Don de jetons</h3>
                     <p id="gift-result">Choisis un joueur et envoie des jetons.</p>
+                    <small id="gift-count" style="color:var(--text-sec)"></small>
                     <div class="actions-row">
                         <select id="gift-user" style="max-width:220px"></select>
                         <input id="gift-amount" type="number" min="1" value="20" style="width:100px" />
                         <button class="buy-btn" onclick="sendTokenGift()">Envoyer</button>
+                        <button class="buy-btn" onclick="loadAvailableUsers()">Rafraîchir liste</button>
                     </div>
                 </div>
             </div>
@@ -421,6 +423,7 @@
             checkUnlocks();
             renderShop();
             document.getElementById('ad-banner').classList.remove('hidden');
+            if (!window.__adRotationStarted) { startAdBannerRotation(); window.__adRotationStarted = true; }
             loadAvailableUsers();
             updateUI();
             
@@ -652,20 +655,45 @@
             setTimeout(() => el.remove(), 1000);
         }
 
-        const retroDeathImages = [
-            'https://picsum.photos/seed/retro1/560/320',
-            'https://picsum.photos/seed/retro2/560/320',
-            'https://picsum.photos/seed/retro3/560/320',
-            'https://picsum.photos/seed/retro4/560/320'
+        const adMessages = [
+            '🔥 De beaux hommes te recherchent proche de chez toi — scénario torride rétro sous néons violets.',
+            '💘 Notification 2010: un inconnu élégant veut danser collé-serré jusqu\'à minuit.',
+            '🌙 Message privé: rendez-vous interdit au lounge arcade, ambiance torride et synthwave.',
+            '✨ Alerte locale: deux beaux gosses t\'attendent pour une nuit dramatique façon soap-opéra.'
         ];
+
+        function startAdBannerRotation() {
+            const target = document.getElementById('ad-banner-text');
+            if (!target) return;
+            let i = 0;
+            target.innerText = adMessages[i];
+            setInterval(() => {
+                i = (i + 1) % adMessages.length;
+                target.innerText = adMessages[i];
+            }, 4500);
+        }
+
+        function retroImageDataUrl(gameName) {
+            const palettes = [
+                ['#2b1b47', '#e43f6f'], ['#102542', '#f87060'], ['#1f2041', '#4b3f72'], ['#0f3460', '#e94560']
+            ];
+            const pick = palettes[Math.floor(Math.random() * palettes.length)];
+            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='560' height='320'>
+                <defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='${pick[0]}'/><stop offset='100%' stop-color='${pick[1]}'/></linearGradient></defs>
+                <rect width='560' height='320' fill='url(#g)'/>
+                <text x='24' y='64' font-size='38' font-family='Verdana' fill='white'>GAME OVER</text>
+                <text x='24' y='112' font-size='24' font-family='Verdana' fill='#ffeaa7'>${gameName}</text>
+                <text x='24' y='286' font-size='18' font-family='Verdana' fill='white'>Arcade reboot mode · 2010 vibes</text>
+            </svg>`;
+            return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+        }
 
         function closeDeathPopup() { document.getElementById('death-popup').style.display = 'none'; }
 
         function showRetroDeathPopup(gameName, detail) {
-            const img = retroDeathImages[Math.floor(Math.random() * retroDeathImages.length)];
             document.getElementById('death-title').innerText = `💀 ${gameName} - Tu es mort`;
             document.getElementById('death-text').innerText = detail || 'Respawn immédiat, ambiance arcade 2010.';
-            document.getElementById('death-image').src = img;
+            document.getElementById('death-image').src = retroImageDataUrl(gameName);
             document.getElementById('death-popup').style.display = 'flex';
         }
 
@@ -707,11 +735,13 @@
             const select = document.getElementById('gift-user');
             if (!select) return;
             select.innerHTML = '';
-            users.filter(u => u.name !== currentUser?.email).forEach(u => {
+            const visibleUsers = users.filter(u => u.name !== currentUser?.email);
+            visibleUsers.forEach(u => {
                 const opt = document.createElement('option');
                 opt.value = u.id; opt.textContent = u.name;
                 select.appendChild(opt);
             });
+            document.getElementById('gift-count').innerText = `${visibleUsers.length} utilisateur(s) disponible(s)`;
         }
 
         async function sendTokenGift() {
@@ -1161,7 +1191,7 @@
             if (!spendTokens(bet, 'classic-poker-result', 'le poker classique')) return;
             const player = Array.from({length:5}, drawCardObj), dealer = Array.from({length:5}, drawCardObj);
             const pe = evaluateHand(player), de = evaluateHand(dealer), cmp = compareEval(pe, de);
-            if (cmp > 0) { payoutTokens(bet * 2); document.getElementById('classic-poker-result').innerText = `Toi [${formatCards(player)}] ${pe.name} > Banque [${formatCards(dealer)}] ${de.name}: +${bet * 2}`; }
+            if (cmp > 0) { payoutTokens(bet * 2); claimOneTimeReward('classicPokerWin', 70, 'Première victoire Poker classique'); document.getElementById('classic-poker-result').innerText = `Toi [${formatCards(player)}] ${pe.name} > Banque [${formatCards(dealer)}] ${de.name}: +${bet * 2}`; }
             else if (cmp === 0) { payoutTokens(bet); document.getElementById('classic-poker-result').innerText = `Égalité ${pe.name}. Mise remboursée.`; }
             else { document.getElementById('classic-poker-result').innerText = `Banque [${formatCards(dealer)}] ${de.name} domine.`; }
         }
@@ -1187,6 +1217,7 @@
             if (cmp > 0) payout = pb.eval.rank >= 4 ? bet * 4 : bet * 3;
             else if (cmp === 0) payout = bet;
             if (payout > 0) payoutTokens(payout);
+            if (cmp > 0) claimOneTimeReward('ultimatePokerWin', 120, 'Première victoire Poker Ultimate');
             document.getElementById('poker-result').innerText = cmp > 0
                 ? `ULTIMATE WIN: [${formatCards(pb.hand)}] ${pb.eval.name} vs [${formatCards(db.hand)}] ${db.eval.name} => +${payout}`
                 : cmp === 0
