@@ -499,6 +499,25 @@
         let currentUser = null;
         let saveLoopStarted = false;
 
+        function getAdRemovalStorageKey() {
+            const userKey = currentUser?.email || 'guest';
+            return `swarm_ads_removed_${userKey}`;
+        }
+
+        function readLocalAdRemoval() {
+            try {
+                return localStorage.getItem(getAdRemovalStorageKey()) === '1';
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function persistLocalAdRemoval(enabled) {
+            try {
+                localStorage.setItem(getAdRemovalStorageKey(), enabled ? '1' : '0');
+            } catch (error) {}
+        }
+
         const buildingDefs = [
             { id: 'cursor',  name: 'Better Mouse',   baseCost: 15,      val: 1,      type: 'click' },
             { id: 'grandma', name: 'Grandma',        baseCost: 100,     val: 5,      type: 'auto' },
@@ -639,6 +658,11 @@
                 gameState.completedRewards = data.gameState.completedRewards || {};
                 gameState.donationHistory = Array.isArray(data.gameState.donationHistory) ? data.gameState.donationHistory : [];
                 gameState.adsRemoved = Boolean(data.gameState.adsRemoved ?? false);
+                if (!gameState.adsRemoved && readLocalAdRemoval()) {
+                    gameState.adsRemoved = true;
+                }
+
+                persistLocalAdRemoval(gameState.adsRemoved);
 
                 buildingDefs.forEach(b => { if (typeof gameState.buildings[b.id] !== "number") gameState.buildings[b.id] = 0; });
             } catch (error) { console.error("Failed to load game state"); }
@@ -848,6 +872,7 @@
             }
             if (!spendTokens(10000, 'ads-result', 'la suppression des pubs')) return;
             gameState.adsRemoved = true;
+            persistLocalAdRemoval(true);
             document.getElementById('retro-banner').classList.add('hidden');
             msgEl.innerText = 'Pubs retirées avec succès ✅';
             checkUnlocks();
