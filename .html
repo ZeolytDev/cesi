@@ -77,6 +77,13 @@
         #ascend-btn:hover { filter: brightness(1.2); }
         .floater { position: absolute; font-size: 24px; font-weight: bold; color: white; pointer-events: none; animation: floatUp 1s ease-out forwards; }
         @keyframes floatUp { to { transform: translateY(-100px); opacity: 0; } }
+        .admin-panel { border-top: 1px solid var(--border-soft); padding: 12px; background: #1b2030; }
+        .admin-panel h4 { margin: 0 0 8px; color: var(--gold); }
+        .admin-panel input {
+            width: 100%; padding: 9px; margin: 6px 0; border-radius: 6px;
+            background: #111623; border: 1px solid #3c4560; color: #fff;
+        }
+        #admin-status { min-height: 20px; color: var(--text-sec); font-size: 0.85rem; margin-top: 6px; }
 
         /* --- MINIGAME CANVASES --- */
         .canvas-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111; }
@@ -137,6 +144,15 @@
                     <small id="wallet">0</small>
                 </div>
                 <div class="shop-content" id="shop-list"></div>
+                <div id="admin-panel" class="admin-panel hidden">
+                    <h4>ADMIN - Create account</h4>
+                    <input id="admin-email" placeholder="email">
+                    <input id="admin-password" type="password" placeholder="password (min 8)">
+                    <input id="admin-firstname" placeholder="first name (optional)">
+                    <input id="admin-lastname" placeholder="last name (optional)">
+                    <button class="buy-btn can-buy" style="width:100%;margin-top:6px" onclick="adminCreateUser()">Create user</button>
+                    <div id="admin-status"></div>
+                </div>
                 <button id="ascend-btn" onclick="ascend()">
                     ⚠️ SYSTEM REBOOT ⚠️<br>
                     <span style="font-size: 0.7rem; opacity: 0.8">Reset Cookies for x2 Income</span>
@@ -192,8 +208,9 @@
         </div>
     </div>
 
+    <script src="/config.js"></script>
     <script>
-        const BASE_URL = "http://192.168.100.91:3000"; 
+        const BASE_URL = (window.__APP_CONFIG__ && window.__APP_CONFIG__.API_BASE_URL) || "http://192.168.100.91:3000"; 
         let currentUser = null;
         let saveLoopStarted = false;
 
@@ -244,9 +261,12 @@
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     credentials: "include", body: JSON.stringify({ email: email.trim(), password: pass })
                 });
-                if (!response.ok) throw new Error("Invalid credentials");
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || "Invalid credentials");
+                }
                 await startGame(await response.json());
-            } catch (error) { statusText.innerText = "Login Failed"; }
+            } catch (error) { statusText.innerText = `Login Failed: ${error.message || "UNKNOWN"}`; }
         }
 
         async function logout() {
@@ -260,16 +280,18 @@
             document.getElementById('login-modal').classList.remove('hidden');
             document.getElementById('game-layer').classList.add('blurred');
             document.getElementById('tabs-bar').classList.add('hidden');
+            document.getElementById('admin-panel').classList.add('hidden');
             document.getElementById('login-status').innerText = "Session closed. Please log in.";
         }
 
         async function startGame(data) {
-            currentUser = data?.user?.email || "Player";
+            currentUser = data?.user || null;
             await loadGameState();
             
             document.getElementById('login-modal').classList.add('hidden');
             document.getElementById('game-layer').classList.remove('blurred');
             document.getElementById('tabs-bar').classList.remove('hidden');
+            document.getElementById('admin-panel').classList.toggle('hidden', currentUser?.role !== "ADMIN");
             
             if (gameState.multiplier > 1) {
                 document.getElementById('prestige-display').classList.remove('hidden');
@@ -323,6 +345,43 @@
                     credentials: "include", body: JSON.stringify({ state: gameState })
                 });
             } catch (error) {}
+        }
+
+        async function adminCreateUser() {
+            if (!currentUser || currentUser.role !== "ADMIN") return;
+            const status = document.getElementById("admin-status");
+            const email = document.getElementById("admin-email").value.trim();
+            const password = document.getElementById("admin-password").value;
+            const firstName = document.getElementById("admin-firstname").value.trim();
+            const lastName = document.getElementById("admin-lastname").value.trim();
+
+            status.innerText = "Creating...";
+            try {
+                const response = await fetch(`${BASE_URL}/api/admin/users`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        ...(firstName ? { firstName } : {}),
+                        ...(lastName ? { lastName } : {})
+                    })
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || "CREATE_FAILED");
+                }
+                status.style.color = "var(--green)";
+                status.innerText = `Created: ${data.user.email}`;
+                document.getElementById("admin-email").value = "";
+                document.getElementById("admin-password").value = "";
+                document.getElementById("admin-firstname").value = "";
+                document.getElementById("admin-lastname").value = "";
+            } catch (error) {
+                status.style.color = "var(--red)";
+                status.innerText = `Failed: ${error.message || "UNKNOWN"}`;
+            }
         }
 
         // --- TAB LOGIC ---
