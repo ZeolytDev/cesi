@@ -108,6 +108,13 @@
         .memory-card.revealed, .memory-card.matched { background:#03dac6; color:#111; }
         .memory-card.matched { cursor:default; opacity:.85; }
 
+
+        .ad-banner { background: linear-gradient(90deg, #ff4d6d, #ff8fa3); color:#1a0d12; font-weight:700; padding:8px 14px; text-align:center; border-bottom:1px solid rgba(0,0,0,.2); }
+        .ad-banner span { color:#2b0010; text-shadow: 0 1px 0 rgba(255,255,255,.4); }
+        .death-popup { position: fixed; inset: 0; background: rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:30; }
+        .death-popup .box { width:min(90vw,560px); background:#161b2b; border:1px solid var(--border-soft); border-radius:12px; padding:16px; text-align:center; }
+        .death-popup img { max-width:100%; max-height:260px; border-radius:10px; border:1px solid #3d465f; }
+
         /* --- LOGIN MODAL --- */
         #login-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(6,8,14,0.8); z-index: 10; }
         .card { background: linear-gradient(170deg, #202434 0%, #161a28 100%); padding: 40px; border-radius: 14px; text-align: center; border: 1px solid var(--border-soft); width: 320px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35); }
@@ -135,9 +142,12 @@
             <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/20)</button>
             <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
             <button id="btn-relax" class="tab-btn" onclick="switchTab('screen-relax', this)">Espace détente</button>
+            <button id="btn-poker" class="tab-btn hidden" onclick="switchTab('screen-poker', this)">Poker Ultimate</button>
         </div>
         <button class="tab-btn logout" onclick="logout()">Se déconnecter</button>
     </div>
+
+    <div id="ad-banner" class="ad-banner hidden"><span>🔥 De beaux hommes te recherchent proche de chez toi — soirée rétro, musique lente, scénario torride niveau 2010. Clique nulle part, c'est juste du lore.</span></div>
 
     <div id="screen-clicker" class="screen active">
         <div id="game-layer" class="blurred">
@@ -215,16 +225,33 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>ESPACE DÉTENTE 🎰🃏</h2>
-                <p>Roulette animée + Blackjack animé.</p>
+                <p>Machine à sous + Roulette + Blackjack. Mise libre partout.</p>
                 <h3 style="color:var(--gold)">Jetons: <span id="slot-tokens">50</span></h3>
+                <p id="poker-unlock-hint">Atteins 1000 jetons pour débloquer Poker Ultimate.</p>
             </div>
             <div class="relax-grid">
                 <div class="relax-card">
-                    <h3>Roulette</h3>
+                    <h3>Machine à sous</h3>
                     <p id="slot-result">Prêt à lancer</p>
                     <canvas id="slot-canvas" width="360" height="220"></canvas>
                     <div class="actions-row">
-                        <button class="buy-btn can-buy" onclick="spinSlotMachine()">Lancer roulette (-1)</button>
+                        <input id="slot-bet" type="number" min="1" value="5" style="width:100px" />
+                        <button class="buy-btn can-buy" onclick="spinSlotMachine()">Lancer</button>
+                    </div>
+                </div>
+                <div class="relax-card">
+                    <h3>Roulette (Rouge/Noir/Pair/Impair)</h3>
+                    <p id="roulette-result">Choisis une mise puis lance.</p>
+                    <canvas id="roulette-canvas" width="360" height="220"></canvas>
+                    <div class="actions-row" style="margin-bottom:8px; flex-wrap: wrap;">
+                        <button class="buy-btn" onclick="setRouletteBetType('red')">Rouge</button>
+                        <button class="buy-btn" onclick="setRouletteBetType('black')">Noir</button>
+                        <button class="buy-btn" onclick="setRouletteBetType('even')">Pair</button>
+                        <button class="buy-btn" onclick="setRouletteBetType('odd')">Impair</button>
+                    </div>
+                    <div class="actions-row">
+                        <input id="roulette-bet" type="number" min="1" value="5" style="width:100px" />
+                        <button class="buy-btn can-buy" onclick="spinRoulette()">Miser</button>
                     </div>
                 </div>
                 <div class="relax-card">
@@ -232,10 +259,46 @@
                     <p id="blackjack-result">Lance une partie.</p>
                     <canvas id="blackjack-canvas" width="360" height="220"></canvas>
                     <div class="actions-row">
-                        <button class="buy-btn" onclick="startBlackjackRound()">Nouvelle main (-2)</button>
+                        <input id="blackjack-bet" type="number" min="1" value="10" style="width:100px" />
+                        <button class="buy-btn" onclick="startBlackjackRound()">Nouvelle main</button>
                         <button class="buy-btn" onclick="blackjackHit()">Hit</button>
                         <button class="buy-btn" onclick="blackjackStand()">Stand</button>
                     </div>
+                </div>
+                <div class="relax-card">
+                    <h3>Poker classique</h3>
+                    <p id="classic-poker-result">Joue une main 5 cartes contre la banque.</p>
+                    <div class="actions-row">
+                        <input id="classic-poker-bet" type="number" min="1" value="15" style="width:100px" />
+                        <button class="buy-btn" onclick="playClassicPoker()">Jouer</button>
+                    </div>
+                </div>
+                <div class="relax-card">
+                    <h3>Don de jetons</h3>
+                    <p id="gift-result">Choisis un joueur et envoie des jetons.</p>
+                    <div class="actions-row">
+                        <select id="gift-user" style="max-width:220px"></select>
+                        <input id="gift-amount" type="number" min="1" value="20" style="width:100px" />
+                        <button class="buy-btn" onclick="sendTokenGift()">Envoyer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-poker" class="screen">
+        <div class="canvas-container">
+            <div class="minigame-ui">
+                <h2>POKER ULTIMATE ♠️</h2>
+                <p>Jeu secret débloqué à 1000 jetons. 1 carte contre la banque: plus haute carte gagne (A haut).</p>
+                <h3 style="color:var(--gold)">Jetons: <span id="poker-tokens">50</span></h3>
+            </div>
+            <div class="relax-card" style="width:min(95vw, 640px)">
+                <h3>Duel rapide</h3>
+                <p id="poker-result">Place une mise pour jouer.</p>
+                <div class="actions-row">
+                    <input id="poker-bet" type="number" min="1" value="25" style="width:100px" />
+                    <button class="buy-btn can-buy" onclick="playPokerUltimate()">Jouer</button>
                 </div>
             </div>
         </div>
@@ -245,11 +308,21 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>SWARM SURVIVAL</h2>
-                <p class="warning-text">⚠️ WIN OR GO BACK TO THE BEGINNING ⚠️</p>
+                <p class="warning-text">⚠️ DODGE THE SWARM ⚠️</p>
                 <p>Move your mouse to control the blue square. DODGE the red swarm. Survive 30 seconds.</p>
                 <h3 style="color:var(--gold)">Time: <span id="dodge-score">0</span>s / 30s</h3>
             </div>
             <canvas id="dodge-canvas" width="600" height="400"></canvas>
+            <div class="actions-row"><button class="buy-btn" onclick="restartSwarmRun()">Relancer</button></div>
+        </div>
+    </div>
+
+    <div id="death-popup" class="death-popup">
+        <div class="box">
+            <h3 id="death-title">GAME OVER</h3>
+            <img id="death-image" alt="retro death" src=""/>
+            <p id="death-text"></p>
+            <button class="buy-btn can-buy" onclick="closeDeathPopup()">Rejouer</button>
         </div>
     </div>
 
@@ -278,7 +351,7 @@
             cookies: 0, clickBase: 1, autoBase: 0, multiplier: 1, buildings: {},
             unlockedTetris: false, unlockedMemory: false, unlockedFlappy: false, unlockedFinal: false,
             memorySolved: false, memoryAttempts: 0,
-            tetrisHigh: 0, flappyHigh: 0, slotTokens: 50
+            tetrisHigh: 0, flappyHigh: 0, slotTokens: 50, unlockedPoker: false, rewardFlags: {}, flappyRewardMilestones: [], usersCache: []
         };
 
         buildingDefs.forEach(b => gameState.buildings[b.id] = 0);
@@ -326,6 +399,7 @@
             document.getElementById('login-modal').classList.remove('hidden');
             document.getElementById('game-layer').classList.add('blurred');
             document.getElementById('tabs-bar').classList.add('hidden');
+            document.getElementById('ad-banner').classList.add('hidden');
             document.getElementById('admin-panel').classList.add('hidden');
             document.getElementById('login-status').innerText = "Session closed. Please log in.";
         }
@@ -346,6 +420,8 @@
 
             checkUnlocks();
             renderShop();
+            document.getElementById('ad-banner').classList.remove('hidden');
+            loadAvailableUsers();
             updateUI();
             
             if (!saveLoopStarted) {
@@ -382,6 +458,10 @@
                 gameState.tetrisHigh = data.gameState.tetrisHigh || 0;
                 gameState.flappyHigh = data.gameState.flappyHigh || 0;
                 gameState.slotTokens = Number(data.gameState.slotTokens ?? 50);
+                gameState.unlockedPoker = Boolean(data.gameState.unlockedPoker ?? false);
+                gameState.rewardFlags = data.gameState.rewardFlags || {};
+                gameState.flappyRewardMilestones = data.gameState.flappyRewardMilestones || [];
+                gameState.usersCache = data.gameState.usersCache || [];
 
                 buildingDefs.forEach(b => { if (typeof gameState.buildings[b.id] !== "number") gameState.buildings[b.id] = 0; });
             } catch (error) { console.error("Failed to load game state"); }
@@ -470,9 +550,13 @@
             if (gameState.unlockedFinal) document.getElementById('btn-final').classList.remove('hidden');
             else document.getElementById('btn-final').classList.add('hidden');
 
+            if (gameState.slotTokens >= 1000) gameState.unlockedPoker = true;
+            document.getElementById('btn-poker').classList.toggle('hidden', !gameState.unlockedPoker);
+            document.getElementById('poker-unlock-hint').innerText = gameState.unlockedPoker ? 'Poker Ultimate débloqué ✅' : 'Atteins 1000 jetons pour débloquer Poker Ultimate.';
             document.getElementById('tetris-high').innerText = gameState.tetrisHigh;
             document.getElementById('flappy-high').innerText = gameState.flappyHigh;
             document.getElementById('slot-tokens').innerText = gameState.slotTokens;
+            document.getElementById('poker-tokens').innerText = gameState.slotTokens;
         }
 
         // --- CORE CLICKER ---
@@ -568,6 +652,88 @@
             setTimeout(() => el.remove(), 1000);
         }
 
+        const retroDeathImages = [
+            'https://picsum.photos/seed/retro1/560/320',
+            'https://picsum.photos/seed/retro2/560/320',
+            'https://picsum.photos/seed/retro3/560/320',
+            'https://picsum.photos/seed/retro4/560/320'
+        ];
+
+        function closeDeathPopup() { document.getElementById('death-popup').style.display = 'none'; }
+
+        function showRetroDeathPopup(gameName, detail) {
+            const img = retroDeathImages[Math.floor(Math.random() * retroDeathImages.length)];
+            document.getElementById('death-title').innerText = `💀 ${gameName} - Tu es mort`;
+            document.getElementById('death-text').innerText = detail || 'Respawn immédiat, ambiance arcade 2010.';
+            document.getElementById('death-image').src = img;
+            document.getElementById('death-popup').style.display = 'flex';
+        }
+
+        function claimOneTimeReward(flag, amount, message) {
+            if (gameState.rewardFlags[flag]) return false;
+            gameState.rewardFlags[flag] = true;
+            gameState.slotTokens += amount;
+            checkUnlocks();
+            alert(`${message} +${amount} jetons`);
+            return true;
+        }
+
+        function claimFlappyMilestone(score) {
+            const marks = [30, 40, 50, 60, 70, 80, 100];
+            if (!marks.includes(score)) return;
+            if (gameState.flappyRewardMilestones.includes(score)) return;
+            gameState.flappyRewardMilestones.push(score);
+            const reward = score * 2;
+            gameState.slotTokens += reward;
+            checkUnlocks();
+            alert(`Flappy milestone ${score} atteint: +${reward} jetons`);
+        }
+
+        async function loadAvailableUsers() {
+            let users = [];
+            try {
+                const res = await fetch(`${BASE_URL}/api/users/list`, { method: 'GET', credentials: 'include' });
+                if (res.ok) {
+                    const data = await res.json();
+                    users = (data.users || []).map(u => ({ id: u.id || u.email, name: u.email || u.username || u.id }));
+                }
+            } catch (error) {}
+            if (!users.length) users = (gameState.usersCache.length ? gameState.usersCache : [
+                { id: 'swarm.alex@hub', name: 'swarm.alex@hub' },
+                { id: 'retro.lena@hub', name: 'retro.lena@hub' },
+                { id: 'pixel.max@hub', name: 'pixel.max@hub' }
+            ]);
+            gameState.usersCache = users;
+            const select = document.getElementById('gift-user');
+            if (!select) return;
+            select.innerHTML = '';
+            users.filter(u => u.name !== currentUser?.email).forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.id; opt.textContent = u.name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function sendTokenGift() {
+            const amount = Math.max(1, Math.floor(Number(document.getElementById('gift-amount').value) || 1));
+            const userId = document.getElementById('gift-user').value;
+            if (!userId) return document.getElementById('gift-result').innerText = 'Aucun joueur disponible.';
+            if (gameState.slotTokens < amount) return document.getElementById('gift-result').innerText = 'Pas assez de jetons.';
+            let sent = false;
+            try {
+                const res = await fetch(`${BASE_URL}/api/game/gift`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                    body: JSON.stringify({ toUserId: userId, amount })
+                });
+                sent = res.ok;
+            } catch (error) {}
+            gameState.slotTokens -= amount;
+            checkUnlocks();
+            document.getElementById('gift-result').innerText = sent
+                ? `Don envoyé: ${amount} jetons.`
+                : `Don simulé localement: ${amount} jetons envoyés.`;
+        }
+
         // ==========================================
         // MINIGAME 1: TETRIS
         // ==========================================
@@ -585,7 +751,7 @@
         function spawnTetrisPiece() {
             const type = Math.floor(Math.random() * 7) + 1;
             piece = { matrix: shapes[type], x: 4, y: 0, type: type };
-            if (collide(board, piece)) { board.forEach(row => row.fill(0)); tScore = 0; } // Game Over
+            if (collide(board, piece)) { board.forEach(row => row.fill(0)); tScore = 0; showRetroDeathPopup('Tetris', 'La pile a touché le plafond.'); } // Game Over
         }
         
         function collide(b, p) {
@@ -608,6 +774,7 @@
                 board.unshift(row); ++y; tScore += 100;
                 if(tScore > gameState.tetrisHigh) { gameState.tetrisHigh = tScore; checkUnlocks(); }
                 document.getElementById('tetris-score').innerText = tScore;
+                if (tScore >= 1000) claimOneTimeReward('tetrisComplete', 100, 'Tetris terminé');
             }
         }
 
@@ -703,12 +870,15 @@
                     
                     if ((50 < p.x + 40 && 50 + bird.size > p.x && (bird.y < p.gap || bird.y + bird.size > p.gap + 120)) || bird.y > 480 || bird.y < -bird.size) {
                         triggerExplosion(60, bird.y + bird.size / 2);
+                        showRetroDeathPopup('Flappy Bird', 'Pipeline fatal. Tu respawn instant.');
                         resetFlappy();
                     }
                     if (!p.passed && p.x + 40 < 50) {
                         p.passed = true;
                         fScore++; document.getElementById('flappy-score').innerText = fScore;
                         if(fScore > gameState.flappyHigh) { gameState.flappyHigh = fScore; checkUnlocks(); }
+                        claimFlappyMilestone(fScore);
+                        if (fScore === 20) claimOneTimeReward('flappyComplete', 90, 'Module Flappy validé');
                     }
                 });
                 pipes = pipes.filter(p => p.x > -40);
@@ -785,6 +955,7 @@
                     gameState.unlockedFlappy = true;
                     checkUnlocks();
                     document.getElementById('slot-result').innerText = 'Memory terminé, Flappy déverrouillé ✅';
+                    claimOneTimeReward('memoryComplete', 120, 'Memory complété');
                 }
                 renderMemoryBoard();
                 return;
@@ -793,75 +964,120 @@
         }
 
         // ==========================================
-        // BONUS: ROULETTE + BLACKJACK (RELAX SPACE)
+        // BONUS: MACHINE A SOUS + ROULETTE + BLACKJACK + POKER
         // ==========================================
         const sCanv = document.getElementById('slot-canvas');
         const sCtx = sCanv.getContext('2d');
-        const rouletteSlices = [
-            { label: '-1', gain: 0, color: '#6b7280', weight: 45 },
-            { label: '+1', gain: 2, color: '#2563eb', weight: 28 },
-            { label: '+3', gain: 4, color: '#16a34a', weight: 18 },
-            { label: '+8', gain: 9, color: '#f59e0b', weight: 7 },
-            { label: 'JACKPOT', gain: 20, color: '#ef4444', weight: 2 }
-        ];
+        const rCanv = document.getElementById('roulette-canvas');
+        const rCtx = rCanv.getContext('2d');
+        const slotSymbols = ['🍒', '🍋', '7️⃣', '💎', '🔔'];
+        const rouletteNumbers = Array.from({ length: 37 }, (_, n) => ({
+            n,
+            color: n === 0 ? 'green' : ([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(n) ? 'red' : 'black')
+        }));
         let rouletteAngle = 0;
+        let rouletteBetType = 'red';
+        let bjPlayer = [], bjDealer = [], bjDeck = [], bjDone = true, bjBet = 0;
 
-        function weightedRoulettePick() {
-            const total = rouletteSlices.reduce((acc, s) => acc + s.weight, 0);
-            let roll = Math.random() * total;
-            for (const slice of rouletteSlices) {
-                roll -= slice.weight;
-                if (roll <= 0) return slice;
-            }
-            return rouletteSlices[0];
+        function getBetValue(inputId, min = 1) {
+            const val = Number(document.getElementById(inputId).value);
+            return Number.isFinite(val) ? Math.max(min, Math.floor(val)) : min;
         }
 
-        function drawRoulette(pointerIndex = null) {
-            sCtx.clearRect(0, 0, sCanv.width, sCanv.height);
-            const cx = 120, cy = 110, r = 85;
-            const sliceAngle = (Math.PI * 2) / rouletteSlices.length;
-            rouletteSlices.forEach((slice, i) => {
-                const start = rouletteAngle + i * sliceAngle;
-                sCtx.beginPath(); sCtx.moveTo(cx, cy);
-                sCtx.arc(cx, cy, r, start, start + sliceAngle);
-                sCtx.closePath();
-                sCtx.fillStyle = slice.color;
-                sCtx.fill();
-                sCtx.fillStyle = '#fff';
-                sCtx.font = '12px sans-serif';
-                sCtx.fillText(slice.label, cx + Math.cos(start + sliceAngle / 2) * 45 - 14, cy + Math.sin(start + sliceAngle / 2) * 45);
-            });
-            sCtx.fillStyle = '#fff';
-            sCtx.beginPath();
-            sCtx.moveTo(cx + r + 15, cy); sCtx.lineTo(cx + r + 35, cy - 10); sCtx.lineTo(cx + r + 35, cy + 10);
-            sCtx.closePath(); sCtx.fill();
-            if (pointerIndex !== null) {
-                sCtx.fillStyle = '#03dac6';
-                sCtx.font = 'bold 14px sans-serif';
-                sCtx.fillText(`Case: ${rouletteSlices[pointerIndex].label}`, 225, 120);
+        function spendTokens(amount, msgId, gameName) {
+            if (gameState.slotTokens < amount) {
+                document.getElementById(msgId).innerText = `Pas assez de jetons pour ${gameName} (${amount} requis).`;
+                return false;
             }
+            gameState.slotTokens -= amount;
+            checkUnlocks();
+            return true;
+        }
+
+        function payoutTokens(amount) {
+            gameState.slotTokens += amount;
+            checkUnlocks();
+        }
+
+        function drawSlot(lastRoll = ['❔', '❔', '❔']) {
+            sCtx.fillStyle = '#111827'; sCtx.fillRect(0, 0, sCanv.width, sCanv.height);
+            sCtx.fillStyle = '#374151'; sCtx.fillRect(20, 25, 320, 120);
+            lastRoll.forEach((sym, i) => {
+                sCtx.fillStyle = '#0b1220'; sCtx.fillRect(35 + i * 100, 40, 80, 90);
+                sCtx.fillStyle = '#fff'; sCtx.font = '42px sans-serif'; sCtx.fillText(sym, 55 + i * 100, 95);
+            });
+            sCtx.fillStyle = '#9ca3af'; sCtx.font = '13px sans-serif';
+            sCtx.fillText('3 identiques = x5 | 2 identiques = x2 | sinon perdu', 24, 178);
         }
 
         function spinSlotMachine() {
-            if (gameState.slotTokens <= 0) return document.getElementById('slot-result').innerText = 'Plus de jetons 😢';
-            gameState.slotTokens -= 1;
-            const result = weightedRoulettePick();
-            const idx = rouletteSlices.indexOf(result);
-            const sliceAngle = (Math.PI * 2) / rouletteSlices.length;
-            const targetAngle = (Math.PI * 8) + ((rouletteSlices.length - idx) * sliceAngle);
-            const startAngle = rouletteAngle;
-            const startTime = performance.now();
-            const duration = 1700;
+            const bet = getBetValue('slot-bet');
+            if (!spendTokens(bet, 'slot-result', 'la machine à sous')) return;
+            const roll = [0,0,0].map(() => slotSymbols[Math.floor(Math.random() * slotSymbols.length)]);
+            drawSlot(roll);
+            const uniq = new Set(roll).size;
+            let multiplier = 0;
+            if (uniq === 1) multiplier = 5; else if (uniq === 2) multiplier = 2;
+            const gain = bet * multiplier;
+            if (gain > 0) payoutTokens(gain);
+            document.getElementById('slot-result').innerText = gain > 0 ? `Résultat ${roll.join(' ')}: x${multiplier}, +${gain} jetons` : `Résultat ${roll.join(' ')}: perdu.`;
+        }
 
+        function drawRoulette(pointer = null) {
+            rCtx.clearRect(0, 0, rCanv.width, rCanv.height);
+            const cx = 120, cy = 110, r = 86;
+            const sliceAngle = (Math.PI * 2) / rouletteNumbers.length;
+            rouletteNumbers.forEach((entry, i) => {
+                const start = rouletteAngle + i * sliceAngle;
+                const mid = start + sliceAngle / 2;
+                rCtx.beginPath(); rCtx.moveTo(cx, cy); rCtx.arc(cx, cy, r, start, start + sliceAngle); rCtx.closePath();
+                rCtx.fillStyle = entry.color === 'red' ? '#dc2626' : entry.color === 'black' ? '#111827' : '#16a34a';
+                rCtx.fill();
+                rCtx.fillStyle = '#fff';
+                rCtx.font = '8px sans-serif';
+                rCtx.fillText(String(entry.n), cx + Math.cos(mid) * 66 - 4, cy + Math.sin(mid) * 66 + 3);
+            });
+            rCtx.fillStyle = '#fff'; rCtx.beginPath();
+            rCtx.moveTo(cx + r + 15, cy); rCtx.lineTo(cx + r + 35, cy - 10); rCtx.lineTo(cx + r + 35, cy + 10);
+            rCtx.closePath(); rCtx.fill();
+            rCtx.font = '13px sans-serif'; rCtx.fillText(`Mise: ${rouletteBetType.toUpperCase()}`, 225, 45);
+            if (pointer !== null) rCtx.fillText(`Numéro: ${rouletteNumbers[pointer].n} (${rouletteNumbers[pointer].color})`, 225, 72);
+        }
+
+        function setRouletteBetType(type) { rouletteBetType = type; drawRoulette(); }
+
+        function rouletteWin(number, type) {
+            if (type === 'red') return number.color === 'red';
+            if (type === 'black') return number.color === 'black';
+            if (type === 'even') return number.n !== 0 && number.n % 2 === 0;
+            if (type === 'odd') return number.n % 2 === 1;
+            return false;
+        }
+
+        function chooseRouletteIndexCheat(type) {
+            const wins = rouletteNumbers.map((n,i)=> rouletteWin(n, type) ? i : -1).filter(i => i >= 0);
+            const losses = rouletteNumbers.map((n,i)=> !rouletteWin(n, type) ? i : -1).filter(i => i >= 0);
+            const riggedLoseChance = 0.78;
+            const pool = Math.random() < riggedLoseChance ? losses : wins;
+            return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        function spinRoulette() {
+            const bet = getBetValue('roulette-bet');
+            if (!spendTokens(bet, 'roulette-result', 'la roulette')) return;
+            const idx = chooseRouletteIndexCheat(rouletteBetType);
+            const sliceAngle = (Math.PI * 2) / rouletteNumbers.length;
+            const targetAngle = (Math.PI * 8) + ((rouletteNumbers.length - idx) * sliceAngle);
+            const startAngle = rouletteAngle, startTime = performance.now(), duration = 1700;
             function animate(now) {
-                const t = Math.min((now - startTime) / duration, 1);
-                const eased = 1 - Math.pow(1 - t, 3);
-                rouletteAngle = startAngle + (targetAngle - startAngle) * eased;
-                drawRoulette();
+                const t = Math.min((now - startTime) / duration, 1), eased = 1 - Math.pow(1 - t, 3);
+                rouletteAngle = startAngle + (targetAngle - startAngle) * eased; drawRoulette();
                 if (t < 1) return requestAnimationFrame(animate);
-                gameState.slotTokens += result.gain;
-                document.getElementById('slot-result').innerText = result.gain > 0 ? `Résultat ${result.label}: +${result.gain} jetons` : 'Perdu, maison gagnante.';
-                document.getElementById('slot-tokens').innerText = gameState.slotTokens;
+                const number = rouletteNumbers[idx], won = rouletteWin(number, rouletteBetType);
+                if (won) payoutTokens(bet * 2);
+                document.getElementById('roulette-result').innerText = won
+                    ? `N°${number.n} ${number.color}: gagné +${bet * 2} jetons (x2)`
+                    : `N°${number.n} ${number.color}: perdu (roulette biaisée 😈).`;
                 drawRoulette(idx);
             }
             requestAnimationFrame(animate);
@@ -869,86 +1085,119 @@
 
         const bCanv = document.getElementById('blackjack-canvas');
         const bCtx = bCanv.getContext('2d');
-        let bjPlayer = [], bjDealer = [], bjDeck = [], bjDone = true;
-
         function newDeck() {
             const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-            bjDeck = [];
-            for (let suit = 0; suit < 4; suit++) vals.forEach(v => bjDeck.push(v));
-            bjDeck.sort(() => Math.random() - 0.5);
+            bjDeck = []; for (let suit = 0; suit < 4; suit++) vals.forEach(v => bjDeck.push(v)); bjDeck.sort(() => Math.random() - 0.5);
         }
-
         function handValue(hand) {
             let total = 0, aces = 0;
             hand.forEach(v => { if (v === 'A') { total += 11; aces++; } else if (['J','Q','K'].includes(v)) total += 10; else total += Number(v); });
-            while (total > 21 && aces-- > 0) total -= 10;
-            return total;
+            while (total > 21 && aces-- > 0) total -= 10; return total;
         }
-
         function drawBlackjack(revealDealer = false) {
             bCtx.fillStyle = '#052e16'; bCtx.fillRect(0,0,bCanv.width,bCanv.height);
             bCtx.fillStyle = '#fff'; bCtx.font = '13px sans-serif';
             bCtx.fillText(`Dealer: ${revealDealer ? handValue(bjDealer) : '?'}`, 10, 18);
-            bCtx.fillText(`Player: ${handValue(bjPlayer)}`, 10, 128);
+            bCtx.fillText(`Player: ${handValue(bjPlayer)}`, 10, 128); bCtx.fillText(`Mise: ${bjBet}`, 255, 18);
             bjDealer.forEach((c, i) => drawCard(20 + i * 45, 28, revealDealer || i === 0 ? c : '🂠'));
             bjPlayer.forEach((c, i) => drawCard(20 + i * 45, 140, c));
         }
-
         function drawCard(x, y, label) {
             bCtx.fillStyle = '#f8fafc'; bCtx.fillRect(x, y, 38, 56);
             bCtx.strokeStyle = '#111'; bCtx.strokeRect(x, y, 38, 56);
             bCtx.fillStyle = '#111'; bCtx.font = '14px sans-serif'; bCtx.fillText(label, x + 10, y + 32);
         }
-
         function startBlackjackRound() {
-            if (gameState.slotTokens < 2) return document.getElementById('blackjack-result').innerText = 'Pas assez de jetons (2 requis).';
-            gameState.slotTokens -= 2;
-            newDeck();
-            bjPlayer = [bjDeck.pop(), bjDeck.pop()];
-            bjDealer = [bjDeck.pop(), bjDeck.pop()];
-            bjDone = false;
-            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
-            document.getElementById('blackjack-result').innerText = 'Main en cours...';
-            animateBlackjackReveal(0);
+            if (!bjDone) return; bjBet = getBetValue('blackjack-bet');
+            if (!spendTokens(bjBet, 'blackjack-result', 'le blackjack')) return;
+            newDeck(); bjPlayer = [bjDeck.pop(), bjDeck.pop()]; bjDealer = [bjDeck.pop(), bjDeck.pop()]; bjDone = false;
+            document.getElementById('blackjack-result').innerText = 'Main en cours...'; animateBlackjackReveal(0);
         }
-
-        function animateBlackjackReveal(step) {
-            drawBlackjack(false);
-            if (step > 2) return;
-            setTimeout(() => animateBlackjackReveal(step + 1), 120);
-        }
-
-        function blackjackHit() {
-            if (bjDone) return;
-            bjPlayer.push(bjDeck.pop());
-            drawBlackjack(false);
-            if (handValue(bjPlayer) > 21) finishBlackjack();
-        }
-
-        function blackjackStand() {
-            if (bjDone) return;
-            while (handValue(bjDealer) < 17) bjDealer.push(bjDeck.pop());
-            finishBlackjack();
-        }
-
+        function animateBlackjackReveal(step) { drawBlackjack(false); if (step > 2) return; setTimeout(() => animateBlackjackReveal(step + 1), 120); }
+        function blackjackHit() { if (bjDone) return; bjPlayer.push(bjDeck.pop()); drawBlackjack(false); if (handValue(bjPlayer) > 21) finishBlackjack(); }
+        function blackjackStand() { if (bjDone) return; while (handValue(bjDealer) < 17) bjDealer.push(bjDeck.pop()); finishBlackjack(); }
         function finishBlackjack() {
-            bjDone = true;
-            const p = handValue(bjPlayer), d = handValue(bjDealer);
-            let msg = 'Égalité.';
+            bjDone = true; const p = handValue(bjPlayer), d = handValue(bjDealer); let msg = 'Égalité.';
             if (p > 21) msg = 'Bust, perdu.';
-            else if (d > 21 || p > d) { gameState.slotTokens += 5; msg = 'Gagné ! +5 jetons'; }
+            else if (d > 21 || p > d) { payoutTokens(bjBet * 2); msg = `Gagné ! +${bjBet * 2} jetons`; }
             else if (p < d) msg = 'Perdu.';
-            else { gameState.slotTokens += 2; msg = 'Push, mise remboursée (+2).'; }
-            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
-            document.getElementById('blackjack-result').innerText = msg;
-            drawBlackjack(true);
+            else { payoutTokens(bjBet); msg = `Push, mise remboursée (+${bjBet}).`; }
+            document.getElementById('blackjack-result').innerText = msg; drawBlackjack(true);
         }
 
-        drawRoulette();
-        drawBlackjack(false);
+        function drawCardObj() {
+            const values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+            const suits = ['♠','♥','♦','♣'];
+            return { value: values[Math.floor(Math.random() * values.length)], suit: suits[Math.floor(Math.random() * suits.length)] };
+        }
+        function cardValue(v) { return ({'J':11,'Q':12,'K':13,'A':14}[v] || Number(v)); }
+        function evaluateHand(cards) {
+            const vals = cards.map(c => cardValue(c.value)).sort((a,b)=>b-a);
+            const suits = cards.map(c => c.suit);
+            const counts = {}; vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
+            const groups = Object.entries(counts).map(([v,c]) => ({v:Number(v), c})).sort((a,b)=> b.c - a.c || b.v - a.v);
+            const flush = suits.every(s => s === suits[0]);
+            const unique = [...new Set(vals)].sort((a,b)=>a-b);
+            const straight = unique.length === 5 && (unique[4] - unique[0] === 4 || JSON.stringify(unique) === JSON.stringify([2,3,4,5,14]));
+            if (straight && flush) return { rank: 8, name: 'Quinte flush', tie: vals };
+            if (groups[0].c === 4) return { rank: 7, name: 'Carré', tie: [groups[0].v, groups[1].v] };
+            if (groups[0].c === 3 && groups[1].c === 2) return { rank: 6, name: 'Full', tie: [groups[0].v, groups[1].v] };
+            if (flush) return { rank: 5, name: 'Couleur', tie: vals };
+            if (straight) return { rank: 4, name: 'Suite', tie: vals };
+            if (groups[0].c === 3) return { rank: 3, name: 'Brelan', tie: [groups[0].v, ...groups.slice(1).map(g=>g.v)] };
+            if (groups[0].c === 2 && groups[1].c === 2) return { rank: 2, name: 'Deux paires', tie: [groups[0].v, groups[1].v, groups[2].v] };
+            if (groups[0].c === 2) return { rank: 1, name: 'Paire', tie: [groups[0].v, ...groups.slice(1).map(g=>g.v)] };
+            return { rank: 0, name: 'Hauteur', tie: vals };
+        }
+        function compareEval(a,b){
+            if (a.rank !== b.rank) return a.rank - b.rank;
+            for (let i=0;i<Math.max(a.tie.length,b.tie.length);i++){ const av=a.tie[i]||0,bv=b.tie[i]||0; if(av!==bv) return av-bv; }
+            return 0;
+        }
+        function formatCards(cards){ return cards.map(c => `${c.value}${c.suit}`).join(' '); }
+
+        function playClassicPoker() {
+            const bet = getBetValue('classic-poker-bet');
+            if (!spendTokens(bet, 'classic-poker-result', 'le poker classique')) return;
+            const player = Array.from({length:5}, drawCardObj), dealer = Array.from({length:5}, drawCardObj);
+            const pe = evaluateHand(player), de = evaluateHand(dealer), cmp = compareEval(pe, de);
+            if (cmp > 0) { payoutTokens(bet * 2); document.getElementById('classic-poker-result').innerText = `Toi [${formatCards(player)}] ${pe.name} > Banque [${formatCards(dealer)}] ${de.name}: +${bet * 2}`; }
+            else if (cmp === 0) { payoutTokens(bet); document.getElementById('classic-poker-result').innerText = `Égalité ${pe.name}. Mise remboursée.`; }
+            else { document.getElementById('classic-poker-result').innerText = `Banque [${formatCards(dealer)}] ${de.name} domine.`; }
+        }
+
+        function bestFiveFromSix(cards) {
+            let best = null;
+            for (let i = 0; i < cards.length; i++) {
+                const hand = cards.filter((_, idx) => idx !== i);
+                const evald = evaluateHand(hand);
+                if (!best || compareEval(evald, best.eval) > 0) best = { hand, eval: evald };
+            }
+            return best;
+        }
+
+        function playPokerUltimate() {
+            if (!gameState.unlockedPoker) return document.getElementById('poker-result').innerText = 'Poker Ultimate est verrouillé.';
+            const bet = getBetValue('poker-bet');
+            if (!spendTokens(bet, 'poker-result', 'Poker Ultimate')) return;
+            const playerSix = Array.from({length:6}, drawCardObj), dealerSix = Array.from({length:6}, drawCardObj);
+            const pb = bestFiveFromSix(playerSix), db = bestFiveFromSix(dealerSix);
+            const cmp = compareEval(pb.eval, db.eval);
+            let payout = 0;
+            if (cmp > 0) payout = pb.eval.rank >= 4 ? bet * 4 : bet * 3;
+            else if (cmp === 0) payout = bet;
+            if (payout > 0) payoutTokens(payout);
+            document.getElementById('poker-result').innerText = cmp > 0
+                ? `ULTIMATE WIN: [${formatCards(pb.hand)}] ${pb.eval.name} vs [${formatCards(db.hand)}] ${db.eval.name} => +${payout}`
+                : cmp === 0
+                    ? `Égalité ultimate (${pb.eval.name}), mise rendue.`
+                    : `Perdu. Toi [${formatCards(pb.hand)}] ${pb.eval.name} | Banque [${formatCards(db.hand)}] ${db.eval.name}`;
+        }
+
+        drawSlot(); drawRoulette(); drawBlackjack(false);
 
         // ==========================================
-        // MINIGAME 3: SWARM SURVIVAL (Brutal Mode)
+        // MINIGAME 3: SWARM SURVIVAL
         // ==========================================
         const dCanv = document.getElementById('dodge-canvas');
         const dCtx = dCanv.getContext('2d');
@@ -959,22 +1208,12 @@
             player.x = e.clientX - rect.left; player.y = e.clientY - rect.top;
         });
 
-        function resetMinigameProgress() {
-            gameState.unlockedMemory = false;
-            gameState.unlockedFlappy = false;
-            gameState.unlockedFinal = false;
-            gameState.memorySolved = false;
-            gameState.memoryAttempts = 0;
-            gameState.tetrisHigh = 0;
-            gameState.flappyHigh = 0;
-            document.getElementById('tetris-score').innerText = "0";
-            document.getElementById('flappy-score').innerText = "0";
-            initMemoryGame();
-            checkUnlocks();
-            saveGame();
-            
-            // Boot player back to Tetris tab
-            switchTab('screen-tetris', document.getElementById('btn-tetris'));
+        function restartSwarmRun() {
+            dTime = 0;
+            enemies = [];
+            player.x = 300;
+            player.y = 200;
+            document.getElementById('dodge-score').innerText = '0.0';
         }
 
         function dodgeLoop() {
@@ -983,16 +1222,16 @@
                 dTime += dt;
                 document.getElementById('dodge-score').innerText = (dTime / 1000).toFixed(1);
 
-                // Make it harder: Spawn rate increases dramatically as time goes on
-                let spawnRate = 0.1 + (dTime / 30000) * 0.5;
+                // Progressive, but fair, difficulty curve
+                let spawnRate = 0.04 + (dTime / 30000) * 0.18;
 
                 if(Math.random() < spawnRate) { 
                     let side = Math.floor(Math.random()*4);
                     let x = side%2===0 ? Math.random()*600 : (side===1?600:0);
                     let y = side%2!==0 ? Math.random()*400 : (side===0?0:400);
                     let angle = Math.atan2(player.y - y, player.x - x);
-                    // Enemies also get slightly faster over time
-                    let speed = 3 + (dTime / 30000) * 3;
+                    // Enemies become faster over time, but less aggressively
+                    let speed = 2 + (dTime / 30000) * 1.6;
                     enemies.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, size: 8 });
                 }
 
@@ -1004,18 +1243,18 @@
                     e.x += e.vx; e.y += e.vy;
                     dCtx.fillStyle = '#cf6679'; dCtx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
                     
-                    // Hit detection - THE PUNISHMENT
+                    // Hit detection
                     let dist = Math.hypot(player.x - e.x, player.y - e.y);
                     if (dist < (player.size/2 + e.size/2)) {
                         dTime = 0; enemies = []; 
-                        alert("YOU DIED!\nThe Swarm consumed you. Your minigame progress has been wiped. Back to Tetris you go!");
-                        resetMinigameProgress();
-                        return; // Exit out of the loop iteration to prevent bugs
+                        showRetroDeathPopup('Swarm Survival', "La nuée t'a eu. Clique relancer et retente.");
+                        return;
                     }
                     if (e.x < -50 || e.x > 650 || e.y < -50 || e.y > 450) enemies.splice(i, 1);
                 }
 
                 if (dTime >= 30000) {
+                    claimOneTimeReward('swarmComplete', 180, 'Swarm Survival terminé');
                     alert("YOU DID IT! You survived the swarm and beat the game!");
                     dTime = 0; enemies = [];
                 }
