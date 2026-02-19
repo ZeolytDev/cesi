@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swarm Empire - Connected Edition</title>
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --bg: #121212; --panel: #1e1e1e; --accent: #bb86fc;
+            --gold: #ffd700; --red: #cf6679; --green: #03dac6;
+            --text: #ffffff; --text-sec: #b0b0b0;
+        }
+
+        body {
+            margin: 0; padding: 0; font-family: 'Roboto', 'Segoe UI', sans-serif;
+            background-color: var(--bg); color: var(--text);
+            height: 100vh; overflow: hidden; user-select: none; display: flex; flex-direction: column;
+        }
+
+        /* --- TABS NAVIGATION --- */
+        #tabs-bar {
+            display: flex; background: #000; padding: 10px 20px;
+            border-bottom: 2px solid #333; gap: 10px; z-index: 5;
+        }
+        .tab-btn {
+            background: #222; color: var(--text-sec); border: 1px solid #444;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer;
+            font-weight: bold; transition: 0.3s;
+        }
+        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tab-btn:hover:not(.active) { background: #333; color: white; }
+        .hidden { display: none !important; }
+
+        /* --- SCREENS --- */
+        .screen { display: none; width: 100%; height: 100%; flex: 1; }
+        .screen.active { display: flex; }
+
+        /* --- CLICKER LAYOUT --- */
+        #game-layer { display: flex; width: 100%; height: 100%; transition: filter 0.5s ease; }
+        .blurred { filter: blur(20px); pointer-events: none; }
+        .game-area { flex: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #2c2c2c 0%, #121212 80%); position: relative; }
+        .shop-area { flex: 4; background: var(--panel); display: flex; flex-direction: column; border-left: 2px solid #333; max-width: 450px; }
+
+        /* --- GAME ELEMENTS --- */
+        .header-stats { text-align: center; margin-bottom: 20px; z-index: 2; }
+        #score { font-size: 4rem; font-weight: 800; color: var(--text); text-shadow: 0 0 20px rgba(187, 134, 252, 0.3); }
+        #cps { color: var(--text-sec); font-size: 1.2rem; }
+        .prestige-badge { background: linear-gradient(45deg, #FFD700, #FFA500); color: black; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; margin-top: 10px; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); display: inline-block; }
+        #cookie { font-size: 200px; cursor: pointer; transition: transform 0.05s; filter: drop-shadow(0 0 30px rgba(0,0,0,0.5)); z-index: 2; }
+        #cookie:active { transform: scale(0.95); }
+        .goal-text { color: var(--red); font-weight: bold; margin-top: 20px; font-size: 1.1rem; }
+
+        /* --- SHOP & ADMIN --- */
+        .shop-header { padding: 20px; background: #252525; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .shop-content { flex: 1; overflow-y: auto; padding: 10px; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e1e1e; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .shop-item { background: #2c2c2c; margin-bottom: 8px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid transparent; transition: all 0.2s; }
+        .shop-item:hover { transform: translateX(-5px); background: #333; }
+        .item-info h4 { margin: 0; font-size: 1rem; color: var(--text); }
+        .item-info p { margin: 4px 0 0; font-size: 0.75rem; color: var(--text-sec); }
+        .item-cost { font-weight: bold; color: var(--gold); }
+        .buy-btn { background: #333; border: 1px solid #555; color: white; padding: 8px 12px; border-radius: 5px; cursor: pointer; min-width: 80px; transition: 0.2s; }
+        .can-buy { background: var(--green); color: black; border-color: var(--green); font-weight: bold; }
+        .locked { opacity: 0.5; pointer-events: none; filter: grayscale(1); }
+        #ascend-btn { width: 100%; padding: 20px; background: linear-gradient(45deg, #e94560, #c0392b); color: white; border: none; font-weight: bold; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; letter-spacing: 2px; display: none; }
+        #ascend-btn:hover { filter: brightness(1.2); }
+        .floater { position: absolute; font-size: 24px; font-weight: bold; color: white; pointer-events: none; animation: floatUp 1s ease-out forwards; }
+        @keyframes floatUp { to { transform: translateY(-100px); opacity: 0; } }
+
+        /* --- MINIGAME CANVASES --- */
+        .canvas-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111; }
+        canvas { border: 2px solid var(--accent); background: #000; box-shadow: 0 0 20px rgba(187,134,252,0.2); }
+        .minigame-ui { text-align: center; margin-bottom: 15px; }
+        .minigame-ui h2 { margin: 0; color: var(--accent); }
+        .minigame-ui p { margin: 5px 0 0 0; color: var(--text-sec); }
+        .warning-text { color: var(--red); font-weight: bold; font-size: 1.2rem; text-transform: uppercase; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* --- LOGIN MODAL --- */
+        #login-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.8); z-index: 10; }
+        .card { background: var(--panel); padding: 40px; border-radius: 10px; text-align: center; border: 1px solid #444; width: 300px; }
+        input { width: 90%; padding: 10px; margin: 10px 0; background: #121212; border: 1px solid #333; color: white; border-radius: 5px; }
+        .btn-main { width: 100%; padding: 12px; background: var(--accent); color: black; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-modal">
+        <div class="card">
+            <h2 style="color: var(--accent)">Swarm Login</h2>
+            <p id="login-status" style="color: var(--text-sec); font-size: 0.9rem; margin-bottom: 10px;">Checking connection...</p>
+            <input type="text" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button class="btn-main" onclick="manualLogin()">ENTER SYSTEM</button>
+        </div>
+    </div>
+
+    <div id="tabs-bar" class="hidden">
+        <button id="btn-clicker" class="tab-btn active" onclick="switchTab('screen-clicker', this)">Main Terminal</button>
+        <button id="btn-tetris" class="tab-btn hidden" onclick="switchTab('screen-tetris', this)">Tetris (Score: <span id="tetris-high">0</span>/1000)</button>
+        <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/50)</button>
+        <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
+    </div>
+
+    <div id="screen-clicker" class="screen active">
+        <div id="game-layer" class="blurred">
+            <div class="game-area">
+                <div class="header-stats">
+                    <div id="score">0</div>
+                    <div id="cps">0 Cookies / Sec</div>
+                    <div id="prestige-display" class="prestige-badge hidden">
+                        MULTIPLIER: x<span id="mult-val">1</span>
+                    </div>
+                    <div id="tetris-goal" class="goal-text">Goal: Reach 1,000,000,000 Qa Cookies to unlock the Arcade!</div>
+                </div>
+                <div id="cookie" onclick="clickCookie(event)">🍪</div>
+            </div>
+
+            <div class="shop-area">
+                <div class="shop-header">
+                    <h3>MARKETPLACE</h3>
+                    <small id="wallet">0</small>
+                </div>
+                <div class="shop-content" id="shop-list"></div>
+                <button id="ascend-btn" onclick="ascend()">
+                    ⚠️ SYSTEM REBOOT ⚠️<br>
+                    <span style="font-size: 0.7rem; opacity: 0.8">Reset Cookies for x2 Income</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-tetris" class="screen">
+        <div class="canvas-container">
+            <div class="minigame-ui">
+                <h2>TETRIS</h2>
+                <p>Arrow keys to move/rotate. Down to drop. Reach 1000 to unlock next module.</p>
+                <h3 style="color:var(--gold)">Score: <span id="tetris-score">0</span></h3>
+            </div>
+            <canvas id="tetris-canvas" width="240" height="400"></canvas>
+        </div>
+    </div>
+
+    <div id="screen-flappy" class="screen">
+        <div class="canvas-container">
+            <div class="minigame-ui">
+                <h2>FLAPPY BIRD</h2>
+                <p>Click or Spacebar to jump. Reach 50 to unlock the final challenge.</p>
+                <h3 style="color:var(--gold)">Score: <span id="flappy-score">0</span></h3>
+            </div>
+            <canvas id="flappy-canvas" width="320" height="480"></canvas>
+        </div>
+    </div>
+
+    <div id="screen-final" class="screen">
+        <div class="canvas-container">
+            <div class="minigame-ui">
+                <h2>SWARM SURVIVAL</h2>
+                <p class="warning-text">⚠️ WIN OR GO BACK TO THE BEGINNING ⚠️</p>
+                <p>Move your mouse to control the blue square. DODGE the red swarm. Survive 30 seconds.</p>
+                <h3 style="color:var(--gold)">Time: <span id="dodge-score">0</span>s / 30s</h3>
+            </div>
+            <canvas id="dodge-canvas" width="600" height="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = "http://192.168.100.91:3000"; 
+        let currentUser = null;
+        let saveLoopStarted = false;
+
+        const buildingDefs = [
+            { id: 'cursor',  name: 'Better Mouse',   baseCost: 15,      val: 1,      type: 'click' },
+            { id: 'grandma', name: 'Grandma',        baseCost: 100,     val: 5,      type: 'auto' },
+            { id: 'farm',    name: 'Cookie Farm',    baseCost: 1100,    val: 15,     type: 'auto' },
+            { id: 'mine',    name: 'Cookie Mine',    baseCost: 12000,   val: 50,     type: 'auto' },
+            { id: 'factory', name: 'Factory',        baseCost: 130000,  val: 150,    type: 'auto' },
+            { id: 'bank',    name: 'Bank',           baseCost: 1400000, val: 500,    type: 'auto' },
+            { id: 'temple',  name: 'Temple',         baseCost: 20000000,val: 1500,   type: 'auto' },
+            { id: 'wiz',     name: 'Wizard Tower',   baseCost: 330000000, val: 5000, type: 'auto' },
+            { id: 'ship',    name: 'Shipment',       baseCost: 5100000000, val: 20000, type: 'auto' },
+            { id: 'alchemy', name: 'Alchemy Lab',    baseCost: 75000000000, val: 100000, type: 'auto' },
+            { id: 'portal',  name: 'Portal',         baseCost: 1000000000000, val: 500000, type: 'auto' },
+            { id: 'time',    name: 'Time Machine',   baseCost: 14000000000000, val: 2000000, type: 'auto' }
+        ];
+
+        let gameState = {
+            cookies: 0, clickBase: 1, autoBase: 0, multiplier: 1, buildings: {},
+            unlockedTetris: false, unlockedFlappy: false, unlockedFinal: false,
+            tetrisHigh: 0, flappyHigh: 0
+        };
+
+        buildingDefs.forEach(b => gameState.buildings[b.id] = 0);
+
+        // --- AUTH & NETWORK ---
+        window.onload = async function() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/auth/me`, { method: "GET", credentials: "include" });
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('login-status').innerText = "Session found! Loading...";
+                    await startGame(data);
+                } else { document.getElementById('login-status').innerText = "Please log in."; }
+            } catch (error) { document.getElementById('login-status').innerText = "Cannot connect to server."; }
+        };
+
+        async function manualLogin() {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const statusText = document.getElementById('login-status');
+            if (!email || !pass) return statusText.innerText = "Please enter email and password.";
+            statusText.innerText = "Authenticating...";
+
+            try {
+                const response = await fetch(`${BASE_URL}/api/auth/login`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    credentials: "include", body: JSON.stringify({ email: email.trim(), password: pass })
+                });
+                if (!response.ok) throw new Error("Invalid credentials");
+                await startGame(await response.json());
+            } catch (error) { statusText.innerText = "Login Failed"; }
+        }
+
+        async function startGame(data) {
+            currentUser = data?.user?.email || "Player";
+            await loadGameState();
+            
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('game-layer').classList.remove('blurred');
+            document.getElementById('tabs-bar').classList.remove('hidden');
+            
+            if (gameState.multiplier > 1) {
+                document.getElementById('prestige-display').classList.remove('hidden');
+                document.getElementById('mult-val').innerText = gameState.multiplier;
+            }
+
+            checkUnlocks();
+            renderShop();
+            updateUI();
+            
+            if (!saveLoopStarted) {
+                setInterval(autoLoop, 1000);
+                setInterval(saveGame, 10000); 
+                saveLoopStarted = true;
+                
+                requestAnimationFrame(tetrisLoop);
+                requestAnimationFrame(flappyLoop);
+                requestAnimationFrame(dodgeLoop);
+            }
+        }
+
+        async function loadGameState() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/game/state`, { method: "GET", credentials: "include" });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!data?.gameState) return;
+                
+                gameState.cookies = Number(data.gameState.cookies ?? 0);
+                gameState.clickBase = Number(data.gameState.clickBase ?? 1);
+                gameState.autoBase = Number(data.gameState.autoBase ?? 0);
+                gameState.multiplier = Number(data.gameState.multiplier ?? 1);
+                gameState.buildings = data.gameState.buildings || {};
+                
+                gameState.unlockedTetris = data.gameState.unlockedTetris || false;
+                gameState.unlockedFlappy = data.gameState.unlockedFlappy || false;
+                gameState.unlockedFinal = data.gameState.unlockedFinal || false;
+                gameState.tetrisHigh = data.gameState.tetrisHigh || 0;
+                gameState.flappyHigh = data.gameState.flappyHigh || 0;
+
+                buildingDefs.forEach(b => { if (typeof gameState.buildings[b.id] !== "number") gameState.buildings[b.id] = 0; });
+            } catch (error) { console.error("Failed to load game state"); }
+        }
+
+        async function saveGame() {
+            if (!currentUser) return;
+            try {
+                await fetch(`${BASE_URL}/api/game/save`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    credentials: "include", body: JSON.stringify({ state: gameState })
+                });
+            } catch (error) {}
+        }
+
+        // --- TAB LOGIC ---
+        let currentActiveTab = 'screen-clicker';
+        function switchTab(screenId, btnElement) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            btnElement.classList.add('active');
+            currentActiveTab = screenId;
+        }
+
+        function checkUnlocks() {
+            // 1e24 = 1 Septillion = 1,000,000,000 Quadrillion (Qa)
+            if (gameState.cookies >= 1e24) {
+                gameState.unlockedTetris = true;
+                document.getElementById('tetris-goal').classList.add('hidden');
+            } else if (!gameState.unlockedTetris) {
+                document.getElementById('tetris-goal').classList.remove('hidden');
+            }
+
+            if (gameState.tetrisHigh >= 1000) gameState.unlockedFlappy = true;
+            if (gameState.flappyHigh >= 50) gameState.unlockedFinal = true;
+
+            if (gameState.unlockedTetris) document.getElementById('btn-tetris').classList.remove('hidden');
+            else document.getElementById('btn-tetris').classList.add('hidden');
+            
+            if (gameState.unlockedFlappy) document.getElementById('btn-flappy').classList.remove('hidden');
+            else document.getElementById('btn-flappy').classList.add('hidden');
+            
+            if (gameState.unlockedFinal) document.getElementById('btn-final').classList.remove('hidden');
+            else document.getElementById('btn-final').classList.add('hidden');
+
+            document.getElementById('tetris-high').innerText = gameState.tetrisHigh;
+            document.getElementById('flappy-high').innerText = gameState.flappyHigh;
+        }
+
+        // --- CORE CLICKER ---
+        function clickCookie(e) {
+            let amount = gameState.clickBase * gameState.multiplier;
+            gameState.cookies += amount;
+            spawnFloater(e.clientX, e.clientY, "+" + formatNumber(amount));
+            updateUI();
+        }
+
+        function autoLoop() {
+            if (gameState.autoBase > 0) {
+                gameState.cookies += (gameState.autoBase * gameState.multiplier);
+                updateUI();
+            }
+        }
+
+        function ascend() {
+            if (gameState.cookies < 10000) return;
+            if(!confirm("REBOOT SYSTEM? \n\nYou lose cookies & buildings. Gain permanent x2 Income.")) return;
+            gameState.multiplier *= 2; gameState.cookies = 0; gameState.clickBase = 1; gameState.autoBase = 0;
+            buildingDefs.forEach(b => gameState.buildings[b.id] = 0);
+            document.getElementById('prestige-display').classList.remove('hidden');
+            document.getElementById('mult-val').innerText = gameState.multiplier;
+            document.getElementById('ascend-btn').style.display = 'none';
+            renderShop(); updateUI(); saveGame(); 
+        }
+
+        function buy(id) {
+            const item = buildingDefs.find(b => b.id === id);
+            const cost = getCost(item);
+            if (gameState.cookies >= cost) {
+                gameState.cookies -= cost; gameState.buildings[id]++;
+                if (item.type === 'click') gameState.clickBase += item.val;
+                if (item.type === 'auto')  gameState.autoBase += item.val;
+                updateUI(); renderShop(); 
+            }
+        }
+
+        function getCost(item) { return Math.floor(item.baseCost * Math.pow(1.15, gameState.buildings[item.id])); }
+
+        function renderShop() {
+            const list = document.getElementById('shop-list');
+            list.innerHTML = ""; 
+            buildingDefs.forEach(item => {
+                const cost = getCost(item); const count = gameState.buildings[item.id];
+                const canAfford = gameState.cookies >= cost;
+                list.innerHTML += `
+                    <div class="shop-item">
+                        <div class="item-info">
+                            <h4>${item.name} <span style="color:#666; font-size:0.8em">x${count}</span></h4>
+                            <p>+${formatNumber(item.val * gameState.multiplier)} ${item.type === 'click' ? 'Click' : '/ sec'}</p>
+                            <div class="item-cost">🍪 ${formatNumber(cost)}</div>
+                        </div>
+                        <button class="buy-btn ${canAfford ? 'can-buy' : 'locked'}" onclick="buy('${item.id}')">BUY</button>
+                    </div>
+                `;
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = formatNumber(Math.floor(gameState.cookies));
+            document.getElementById('wallet').innerText = formatNumber(Math.floor(gameState.cookies));
+            document.getElementById('cps').innerText = formatNumber(gameState.autoBase * gameState.multiplier) + " / Sec";
+            document.getElementById('ascend-btn').style.display = gameState.cookies >= 10000 ? 'block' : 'none';
+
+            const buttons = document.querySelectorAll('.buy-btn');
+            buildingDefs.forEach((item, i) => {
+                if(buttons[i]) buttons[i].className = `buy-btn ${gameState.cookies >= getCost(item) ? 'can-buy' : 'locked'}`;
+            });
+            checkUnlocks();
+        }
+
+        // --- UPDATED NUMBER FORMATTER ---
+        function formatNumber(num) {
+            if (num >= 1e27) return (num / 1e27).toFixed(2) + 'Oc'; // Octillion
+            if (num >= 1e24) return (num / 1e24).toFixed(2) + 'Sp'; // Septillion (1,000,000,000 Qa)
+            if (num >= 1e21) return (num / 1e21).toFixed(2) + 'Sx'; // Sextillion
+            if (num >= 1e18) return (num / 1e18).toFixed(2) + 'Qi'; // Quintillion
+            if (num >= 1e15) return (num / 1e15).toFixed(2) + 'Qa'; // Quadrillion
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';  // Trillion
+            if (num >= 1e9)  return (num / 1e9).toFixed(2) + 'B';   // Billion
+            if (num >= 1e6)  return (num / 1e6).toFixed(2) + 'M';   // Million
+            if (num >= 1e3)  return (num / 1e3).toFixed(2) + 'k';   // Thousand
+            return Math.floor(num).toString();
+        }
+
+        function spawnFloater(x, y, text) {
+            const el = document.createElement('div');
+            el.innerText = text; el.className = 'floater';
+            el.style.left = (x - 20) + "px"; el.style.top = (y - 50) + "px";
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        // ==========================================
+        // MINIGAME 1: TETRIS
+        // ==========================================
+        const tCanv = document.getElementById('tetris-canvas');
+        const tCtx = tCanv.getContext('2d');
+        const COLS = 12, ROWS = 20, BLOCK = 20;
+        let board = Array.from({length: ROWS}, () => Array(COLS).fill(0));
+        let piece = null, tScore = 0, lastDrop = Date.now();
+        const shapes = [ [],
+            [[1,1,1,1]], [[1,0,0],[1,1,1]], [[0,0,1],[1,1,1]],
+            [[1,1],[1,1]], [[0,1,1],[1,1,0]], [[0,1,0],[1,1,1]], [[1,1,0],[0,1,1]]
+        ];
+        const colors = [null, '#00ffff', '#0000ff', '#ffa500', '#ffff00', '#00ff00', '#800080', '#ff0000'];
+
+        function spawnTetrisPiece() {
+            const type = Math.floor(Math.random() * 7) + 1;
+            piece = { matrix: shapes[type], x: 4, y: 0, type: type };
+            if (collide(board, piece)) { board.forEach(row => row.fill(0)); tScore = 0; } // Game Over
+        }
+        
+        function collide(b, p) {
+            for (let y = 0; y < p.matrix.length; ++y) {
+                for (let x = 0; x < p.matrix[y].length; ++x) {
+                    if (p.matrix[y][x] && (b[y + p.y] && b[y + p.y][x + p.x]) !== 0) return true;
+                }
+            }
+            return false;
+        }
+
+        function merge(b, p) {
+            p.matrix.forEach((row, y) => row.forEach((val, x) => { if (val) b[y + p.y][x + p.x] = p.type; }));
+        }
+
+        function clearLines() {
+            outer: for (let y = ROWS - 1; y >= 0; --y) {
+                for (let x = 0; x < COLS; ++x) if (b[y][x] === 0) continue outer;
+                const row = board.splice(y, 1)[0].fill(0);
+                board.unshift(row); ++y; tScore += 100;
+                if(tScore > gameState.tetrisHigh) { gameState.tetrisHigh = tScore; checkUnlocks(); }
+                document.getElementById('tetris-score').innerText = tScore;
+            }
+        }
+
+        function tetrisLoop() {
+            if (currentActiveTab === 'screen-tetris') {
+                if (!piece) spawnTetrisPiece();
+                if (Date.now() - lastDrop > 500) {
+                    piece.y++;
+                    if (collide(board, piece)) { piece.y--; merge(board, piece); clearLines(); spawnTetrisPiece(); }
+                    lastDrop = Date.now();
+                }
+                tCtx.fillStyle = '#000'; tCtx.fillRect(0,0, tCanv.width, tCanv.height);
+                drawMatrix(board, 0, 0); drawMatrix(piece.matrix, piece.x, piece.y);
+            }
+            requestAnimationFrame(tetrisLoop);
+        }
+
+        function drawMatrix(matrix, offsetX, offsetY) {
+            matrix.forEach((row, y) => {
+                row.forEach((val, x) => {
+                    if (val !== 0) {
+                        tCtx.fillStyle = colors[val];
+                        tCtx.fillRect((x + offsetX) * BLOCK, (y + offsetY) * BLOCK, BLOCK-1, BLOCK-1);
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('keydown', e => {
+            if (currentActiveTab !== 'screen-tetris' || !piece) return;
+            if (e.key === 'ArrowLeft') { piece.x--; if(collide(board, piece)) piece.x++; }
+            if (e.key === 'ArrowRight') { piece.x++; if(collide(board, piece)) piece.x--; }
+            if (e.key === 'ArrowDown') { piece.y++; if(collide(board, piece)){ piece.y--; merge(board, piece); spawnTetrisPiece(); } }
+            if (e.key === 'ArrowUp') {
+                const rot = piece.matrix[0].map((val, index) => piece.matrix.map(row => row[index]).reverse());
+                const prev = piece.matrix; piece.matrix = rot;
+                if (collide(board, piece)) piece.matrix = prev;
+            }
+        });
+
+        // ==========================================
+        // MINIGAME 2: FLAPPY BIRD
+        // ==========================================
+        const fCanv = document.getElementById('flappy-canvas');
+        const fCtx = fCanv.getContext('2d');
+        let bird = { y: 240, v: 0, size: 20 }, pipes = [], fFrames = 0, fScore = 0;
+
+        function jump(e) { if(currentActiveTab === 'screen-flappy') { bird.v = -6; if(e) e.preventDefault(); } }
+        document.addEventListener('keydown', e => { if(e.code === 'Space') jump(e); });
+        fCanv.addEventListener('mousedown', jump);
+
+        function flappyLoop() {
+            if (currentActiveTab === 'screen-flappy') {
+                bird.v += 0.3; bird.y += bird.v; 
+                if(fFrames % 90 === 0) pipes.push({ x: 320, gap: Math.random()*200 + 50, passed: false });
+                
+                fCtx.fillStyle = '#000'; fCtx.fillRect(0,0, 320, 480);
+                fCtx.fillStyle = varColor('--gold'); fCtx.fillRect(50, bird.y, bird.size, bird.size);
+
+                pipes.forEach((p, i) => {
+                    p.x -= 2;
+                    fCtx.fillStyle = '#03dac6';
+                    fCtx.fillRect(p.x, 0, 40, p.gap); 
+                    fCtx.fillRect(p.x, p.gap + 120, 40, 480); 
+                    
+                    if (50 < p.x + 40 && 50 + bird.size > p.x && (bird.y < p.gap || bird.y + bird.size > p.gap + 120) || bird.y > 480) {
+                        fScore = 0; bird.y = 240; pipes = []; fFrames = 0; 
+                    }
+                    if (p.x === 40) {
+                        fScore++; document.getElementById('flappy-score').innerText = fScore;
+                        if(fScore > gameState.flappyHigh) { gameState.flappyHigh = fScore; checkUnlocks(); }
+                    }
+                });
+                pipes = pipes.filter(p => p.x > -40);
+                fFrames++;
+            }
+            requestAnimationFrame(flappyLoop);
+        }
+
+        // ==========================================
+        // MINIGAME 3: SWARM SURVIVAL (Brutal Mode)
+        // ==========================================
+        const dCanv = document.getElementById('dodge-canvas');
+        const dCtx = dCanv.getContext('2d');
+        let player = { x: 300, y: 200, size: 15 }, enemies = [], dTime = 0, lastTick = Date.now();
+
+        dCanv.addEventListener('mousemove', e => {
+            const rect = dCanv.getBoundingClientRect();
+            player.x = e.clientX - rect.left; player.y = e.clientY - rect.top;
+        });
+
+        function resetMinigameProgress() {
+            gameState.unlockedFlappy = false;
+            gameState.unlockedFinal = false;
+            gameState.tetrisHigh = 0;
+            gameState.flappyHigh = 0;
+            document.getElementById('tetris-score').innerText = "0";
+            document.getElementById('flappy-score').innerText = "0";
+            checkUnlocks();
+            saveGame();
+            
+            // Boot player back to Tetris tab
+            switchTab('screen-tetris', document.getElementById('btn-tetris'));
+        }
+
+        function dodgeLoop() {
+            if (currentActiveTab === 'screen-final') {
+                const now = Date.now(); const dt = now - lastTick; lastTick = now;
+                dTime += dt;
+                document.getElementById('dodge-score').innerText = (dTime / 1000).toFixed(1);
+
+                // Make it harder: Spawn rate increases dramatically as time goes on
+                let spawnRate = 0.1 + (dTime / 30000) * 0.5;
+
+                if(Math.random() < spawnRate) { 
+                    let side = Math.floor(Math.random()*4);
+                    let x = side%2===0 ? Math.random()*600 : (side===1?600:0);
+                    let y = side%2!==0 ? Math.random()*400 : (side===0?0:400);
+                    let angle = Math.atan2(player.y - y, player.x - x);
+                    // Enemies also get slightly faster over time
+                    let speed = 3 + (dTime / 30000) * 3;
+                    enemies.push({ x: x, y: y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, size: 8 });
+                }
+
+                dCtx.fillStyle = 'rgba(0,0,0,0.3)'; dCtx.fillRect(0,0,600,400); 
+                dCtx.fillStyle = '#bb86fc'; dCtx.fillRect(player.x - player.size/2, player.y - player.size/2, player.size, player.size);
+
+                for (let i = enemies.length-1; i >= 0; i--) {
+                    let e = enemies[i];
+                    e.x += e.vx; e.y += e.vy;
+                    dCtx.fillStyle = '#cf6679'; dCtx.fillRect(e.x - e.size/2, e.y - e.size/2, e.size, e.size);
+                    
+                    // Hit detection - THE PUNISHMENT
+                    let dist = Math.hypot(player.x - e.x, player.y - e.y);
+                    if (dist < (player.size/2 + e.size/2)) {
+                        dTime = 0; enemies = []; 
+                        alert("YOU DIED!\nThe Swarm consumed you. Your minigame progress has been wiped. Back to Tetris you go!");
+                        resetMinigameProgress();
+                        return; // Exit out of the loop iteration to prevent bugs
+                    }
+                    if (e.x < -50 || e.x > 650 || e.y < -50 || e.y > 450) enemies.splice(i, 1);
+                }
+
+                if (dTime >= 30000) {
+                    alert("YOU DID IT! You survived the swarm and beat the game!");
+                    dTime = 0; enemies = [];
+                }
+            } else { lastTick = Date.now(); } 
+            requestAnimationFrame(dodgeLoop);
+        }
+
+        function varColor(name) { return getComputedStyle(document.body).getPropertyValue(name); }
+    </script>
+</body>
+</html>
