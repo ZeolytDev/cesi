@@ -312,6 +312,13 @@
                     </div>
                 </div>
                 <div class="relax-card">
+                    <h3>Suppression des pubs</h3>
+                    <p id="ads-result">Retire la bannière pub rétro définitivement pour ce compte.</p>
+                    <div class="actions-row">
+                        <button id="remove-ads-btn" class="buy-btn can-buy" onclick="buyAdRemoval()">Enlever les pubs (10000 jetons)</button>
+                    </div>
+                </div>
+                <div class="relax-card">
                     <h3>Blackjack</h3>
                     <p id="blackjack-result">Lance une partie.</p>
                     <canvas id="blackjack-canvas" width="360" height="220"></canvas>
@@ -385,7 +392,7 @@
             unlockedTetris: false, unlockedMemory: false, unlockedFlappy: false, unlockedFinal: false,
             memorySolved: false, memoryAttempts: 0,
             tetrisHigh: 0, flappyHigh: 0, slotTokens: 50, unlockedPoker: false,
-            claimedFlappyMilestones: [], completedRewards: {}, donationHistory: []
+            claimedFlappyMilestones: [], completedRewards: {}, donationHistory: [], adsRemoved: false
         };
 
         buildingDefs.forEach(b => gameState.buildings[b.id] = 0);
@@ -495,6 +502,7 @@
                 gameState.claimedFlappyMilestones = Array.isArray(data.gameState.claimedFlappyMilestones) ? data.gameState.claimedFlappyMilestones : [];
                 gameState.completedRewards = data.gameState.completedRewards || {};
                 gameState.donationHistory = Array.isArray(data.gameState.donationHistory) ? data.gameState.donationHistory : [];
+                gameState.adsRemoved = Boolean(data.gameState.adsRemoved ?? false);
 
                 buildingDefs.forEach(b => { if (typeof gameState.buildings[b.id] !== "number") gameState.buildings[b.id] = 0; });
             } catch (error) { console.error("Failed to load game state"); }
@@ -590,12 +598,23 @@
             document.getElementById('flappy-high').innerText = gameState.flappyHigh;
             document.getElementById('slot-tokens').innerText = gameState.slotTokens;
             document.getElementById('poker-tokens').innerText = gameState.slotTokens;
+            const adBtn = document.getElementById('remove-ads-btn');
+            const adMsg = document.getElementById('ads-result');
+            adBtn.disabled = gameState.adsRemoved;
+            adBtn.classList.toggle('cannot-buy', gameState.adsRemoved);
+            adBtn.classList.toggle('can-buy', !gameState.adsRemoved);
+            adBtn.innerText = gameState.adsRemoved ? 'Pubs retirées ✅' : 'Enlever les pubs (10000 jetons)';
+            if (gameState.adsRemoved) adMsg.innerText = 'Retrait des pubs actif pour ce compte.';
             refreshDonationUsers();
         }
 
 
         function initRetroBanner() {
             const banner = document.getElementById('retro-banner');
+            if (gameState.adsRemoved) {
+                banner.classList.add('hidden');
+                return;
+            }
             banner.classList.remove('hidden');
             const messages = [
                 "🔥 De beaux inconnus te cherchent à 2 rues: soirée néon, poker et confidences jusqu'à minuit…",
@@ -633,6 +652,20 @@
                 </div>`;
             document.body.appendChild(overlay);
             overlay.querySelector('#close-popup').onclick = () => overlay.remove();
+        }
+
+        
+        function buyAdRemoval() {
+            const msgEl = document.getElementById('ads-result');
+            if (gameState.adsRemoved) {
+                msgEl.innerText = 'Les pubs sont déjà désactivées ✅';
+                return;
+            }
+            if (!spendTokens(10000, 'ads-result', 'la suppression des pubs')) return;
+            gameState.adsRemoved = true;
+            document.getElementById('retro-banner').classList.add('hidden');
+            msgEl.innerText = 'Pubs retirées avec succès ✅';
+            checkUnlocks();
         }
 
         function refreshDonationUsers() {
@@ -790,8 +823,8 @@
                 for (let x = 0; x < COLS; ++x) if (board[y][x] === 0) continue outer;
                 const row = board.splice(y, 1)[0].fill(0);
                 board.unshift(row); ++y; tScore += 100;
+                payoutTokens(1);
                 if(tScore > gameState.tetrisHigh) { gameState.tetrisHigh = tScore; checkUnlocks(); }
-                if (tScore >= 1000) rewardCompletion('tetris', 150, 'objectif Tetris atteint');
                 document.getElementById('tetris-score').innerText = tScore;
             }
         }
@@ -840,9 +873,16 @@
         const fCanv = document.getElementById('flappy-canvas');
         const fCtx = fCanv.getContext('2d');
         let bird = { y: 240, v: 0, size: 20 }, pipes = [], fFrames = 0, fScore = 0;
+        let flappyStarted = false;
         let explosion = { active: false, x: 0, y: 0, life: 0, particles: [] };
 
-        function jump(e) { if(currentActiveTab === 'screen-flappy') { bird.v = -6; if(e) e.preventDefault(); } }
+        function jump(e) {
+            if(currentActiveTab === 'screen-flappy') {
+                flappyStarted = true;
+                bird.v = -6;
+                if(e) e.preventDefault();
+            }
+        }
         document.addEventListener('keydown', e => { if(e.code === 'Space') jump(e); });
         fCanv.addEventListener('mousedown', jump);
 
@@ -868,16 +908,29 @@
             bird.v = 0;
             pipes = [];
             fFrames = 0;
+            flappyStarted = false;
             document.getElementById('flappy-score').innerText = '0';
         }
 
         function flappyLoop() {
             if (currentActiveTab === 'screen-flappy') {
+                fCtx.fillStyle = '#000'; fCtx.fillRect(0,0, 320, 480);
+                fCtx.font = '22px sans-serif';
+
+                if (!flappyStarted) {
+                    bird.v = 0;
+                    bird.y = 240;
+                    fCtx.fillText('✈️', 50, bird.y + bird.size);
+                    fCtx.font = '18px sans-serif';
+                    fCtx.fillStyle = '#ffffff';
+                    fCtx.fillText('Clique ou espace pour commencer', 18, 60);
+                    requestAnimationFrame(flappyLoop);
+                    return;
+                }
+
                 bird.v += 0.3; bird.y += bird.v; 
                 if(fFrames % 90 === 0) pipes.push({ x: 320, gap: Math.random()*200 + 50, passed: false });
                 
-                fCtx.fillStyle = '#000'; fCtx.fillRect(0,0, 320, 480);
-                fCtx.font = '22px sans-serif';
                 fCtx.fillText('✈️', 50, bird.y + bird.size);
 
                 pipes.forEach((p, i) => {
@@ -895,16 +948,7 @@
                         p.passed = true;
                         fScore++; document.getElementById('flappy-score').innerText = fScore;
                         if(fScore > gameState.flappyHigh) { gameState.flappyHigh = fScore; checkUnlocks(); }
-                        const milestones = [30, 40, 50, 60, 80, 100];
-                        milestones.forEach(ms => {
-                            if (fScore >= ms && !gameState.claimedFlappyMilestones.includes(ms)) {
-                                gameState.claimedFlappyMilestones.push(ms);
-                                const gain = 20 + Math.floor(ms * 1.5);
-                                payoutTokens(gain);
-                                document.getElementById('flappy-score').innerText = `${fScore} (+${gain} jetons!)`;
-                            }
-                        });
-                        if (fScore >= 20) rewardCompletion('flappyFinish', 120, 'objectif Flappy atteint');
+                        if (fScore % 10 === 0) payoutTokens(1);
                     }
                 });
                 pipes = pipes.filter(p => p.x > -40);
@@ -981,7 +1025,7 @@
                     gameState.unlockedFlappy = true;
                     checkUnlocks();
                     document.getElementById('slot-result').innerText = 'Memory terminé, Flappy déverrouillé ✅';
-                    rewardCompletion('memory', 100, 'Memory terminé');
+                    rewardCompletion('memory', 10, 'Memory terminé');
                 }
                 renderMemoryBoard();
                 return;
@@ -1333,14 +1377,14 @@
                     if (dist < (player.size/2 + e.size/2)) {
                         triggerRetroDeathPopup('Swarm Survival');
                         resetDodge();
-                        return;
+                        break;
                     }
                     if (e.x < -50 || e.x > 650 || e.y < -50 || e.y > 450) enemies.splice(i, 1);
                 }
 
                 if (dTime >= 30000) {
                     alert("YOU DID IT! You survived the swarm and beat the game!");
-                    rewardCompletion('swarm', 250, 'Swarm Survival terminé');
+                    rewardCompletion('swarm', 10, 'Swarm Survival terminé');
                     resetDodge();
                 }
             } else { lastTick = Date.now(); } 
