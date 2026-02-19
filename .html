@@ -94,6 +94,20 @@
         .warning-text { color: var(--red); font-weight: bold; font-size: 1.2rem; text-transform: uppercase; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
+
+        .relax-grid { display: grid; grid-template-columns: repeat(2, minmax(340px, 1fr)); gap: 18px; width: min(95vw, 900px); }
+        .relax-card { background: #171c2a; border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px; }
+        .relax-card h3 { margin: 0 0 8px; color: var(--green); }
+        .actions-row { display:flex; gap:8px; justify-content:center; margin-top:8px; flex-wrap:wrap; }
+        .memory-board {
+            display:grid; grid-template-columns: repeat(10, 52px); gap:8px; justify-content:center;
+            margin-top: 10px; max-height: 360px; overflow-y: auto; padding: 8px; background: #0d111d; border-radius: 10px; border: 1px solid #2f3855;
+        }
+        .memory-card { width:52px; height:52px; border-radius:8px; border:1px solid #495170; background:#26304a; color:#fff; font-size:24px; cursor:pointer; transition: transform .2s, background .2s; }
+        .memory-card:hover { transform: translateY(-2px); }
+        .memory-card.revealed, .memory-card.matched { background:#03dac6; color:#111; }
+        .memory-card.matched { cursor:default; opacity:.85; }
+
         /* --- LOGIN MODAL --- */
         #login-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(6,8,14,0.8); z-index: 10; }
         .card { background: linear-gradient(170deg, #202434 0%, #161a28 100%); padding: 40px; border-radius: 14px; text-align: center; border: 1px solid var(--border-soft); width: 320px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35); }
@@ -117,6 +131,7 @@
         <div class="tabs-group">
             <button id="btn-clicker" class="tab-btn active" onclick="switchTab('screen-clicker', this)">Main Terminal</button>
             <button id="btn-tetris" class="tab-btn hidden" onclick="switchTab('screen-tetris', this)">Tetris (Score: <span id="tetris-high">0</span>/1000)</button>
+            <button id="btn-memory" class="tab-btn hidden" onclick="switchTab('screen-memory', this)">Memory 50 cartes</button>
             <button id="btn-flappy" class="tab-btn hidden" onclick="switchTab('screen-flappy', this)">Flappy (Score: <span id="flappy-high">0</span>/20)</button>
             <button id="btn-final" class="tab-btn hidden" onclick="switchTab('screen-final', this)">Swarm Survival</button>
             <button id="btn-relax" class="tab-btn" onclick="switchTab('screen-relax', this)">Espace détente</button>
@@ -172,6 +187,19 @@
         </div>
     </div>
 
+
+    <div id="screen-memory" class="screen">
+        <div class="canvas-container">
+            <div class="minigame-ui">
+                <h2>MEMORY - 50 CARTES</h2>
+                <p>Trouve les 25 paires d'émojis pour déverrouiller Flappy Bird.</p>
+                <h3 style="color:var(--gold)">Paires: <span id="memory-matched">0</span>/25</h3>
+                <h3>Essais: <span id="memory-attempts">0</span></h3>
+            </div>
+            <div id="memory-board" class="memory-board"></div>
+        </div>
+    </div>
+
     <div id="screen-flappy" class="screen">
         <div class="canvas-container">
             <div class="minigame-ui">
@@ -186,13 +214,30 @@
     <div id="screen-relax" class="screen">
         <div class="canvas-container">
             <div class="minigame-ui">
-                <h2>ESPACE DÉTENTE 🎰</h2>
-                <p>Machine à sous : chaque lancé coûte 1 jeton.</p>
+                <h2>ESPACE DÉTENTE 🎰🃏</h2>
+                <p>Roulette animée + Blackjack animé.</p>
                 <h3 style="color:var(--gold)">Jetons: <span id="slot-tokens">50</span></h3>
-                <h3>Résultat: <span id="slot-result">Prêt à lancer</span></h3>
-                <button class="buy-btn can-buy" style="margin-top:8px" onclick="spinSlotMachine()">Lancer (-1)</button>
             </div>
-            <canvas id="slot-canvas" width="360" height="220"></canvas>
+            <div class="relax-grid">
+                <div class="relax-card">
+                    <h3>Roulette</h3>
+                    <p id="slot-result">Prêt à lancer</p>
+                    <canvas id="slot-canvas" width="360" height="220"></canvas>
+                    <div class="actions-row">
+                        <button class="buy-btn can-buy" onclick="spinSlotMachine()">Lancer roulette (-1)</button>
+                    </div>
+                </div>
+                <div class="relax-card">
+                    <h3>Blackjack</h3>
+                    <p id="blackjack-result">Lance une partie.</p>
+                    <canvas id="blackjack-canvas" width="360" height="220"></canvas>
+                    <div class="actions-row">
+                        <button class="buy-btn" onclick="startBlackjackRound()">Nouvelle main (-2)</button>
+                        <button class="buy-btn" onclick="blackjackHit()">Hit</button>
+                        <button class="buy-btn" onclick="blackjackStand()">Stand</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -231,7 +276,8 @@
 
         let gameState = {
             cookies: 0, clickBase: 1, autoBase: 0, multiplier: 1, buildings: {},
-            unlockedTetris: false, unlockedFlappy: false, unlockedFinal: false,
+            unlockedTetris: false, unlockedMemory: false, unlockedFlappy: false, unlockedFinal: false,
+            memorySolved: false, memoryAttempts: 0,
             tetrisHigh: 0, flappyHigh: 0, slotTokens: 50
         };
 
@@ -311,6 +357,7 @@
                 requestAnimationFrame(flappyLoop);
                 requestAnimationFrame(dodgeLoop);
             }
+            initMemoryGame();
         }
 
         async function loadGameState() {
@@ -327,8 +374,11 @@
                 gameState.buildings = data.gameState.buildings || {};
                 
                 gameState.unlockedTetris = data.gameState.unlockedTetris || false;
+                gameState.unlockedMemory = data.gameState.unlockedMemory || false;
                 gameState.unlockedFlappy = data.gameState.unlockedFlappy || false;
                 gameState.unlockedFinal = data.gameState.unlockedFinal || false;
+                gameState.memorySolved = data.gameState.memorySolved || false;
+                gameState.memoryAttempts = Number(data.gameState.memoryAttempts ?? 0);
                 gameState.tetrisHigh = data.gameState.tetrisHigh || 0;
                 gameState.flappyHigh = data.gameState.flappyHigh || 0;
                 gameState.slotTokens = Number(data.gameState.slotTokens ?? 50);
@@ -392,6 +442,7 @@
             document.getElementById(screenId).classList.add('active');
             btnElement.classList.add('active');
             currentActiveTab = screenId;
+            if (screenId === 'screen-memory') renderMemoryBoard();
         }
 
         function checkUnlocks() {
@@ -403,12 +454,16 @@
                 document.getElementById('tetris-goal').classList.remove('hidden');
             }
 
-            if (gameState.tetrisHigh >= 1000) gameState.unlockedFlappy = true;
+            if (gameState.tetrisHigh >= 1000) gameState.unlockedMemory = true;
+            if (gameState.memorySolved) gameState.unlockedFlappy = true;
             if (gameState.flappyHigh >= 20) gameState.unlockedFinal = true;
 
             if (gameState.unlockedTetris) document.getElementById('btn-tetris').classList.remove('hidden');
             else document.getElementById('btn-tetris').classList.add('hidden');
             
+            if (gameState.unlockedMemory) document.getElementById('btn-memory').classList.remove('hidden');
+            else document.getElementById('btn-memory').classList.add('hidden');
+
             if (gameState.unlockedFlappy) document.getElementById('btn-flappy').classList.remove('hidden');
             else document.getElementById('btn-flappy').classList.add('hidden');
             
@@ -675,45 +730,222 @@
         }
 
         // ==========================================
-        // BONUS: SLOT MACHINE (RELAX SPACE)
+        // MINIGAME 2.5: MEMORY (50 CARDS)
+        // ==========================================
+        const memoryEmojis = ['🐝','🐱','🐶','🦊','🐼','🐸','🦁','🐵','🐙','🦄','🐧','🐢','🐳','🦋','🌈','⭐','🔥','🍀','🎯','⚡','🍕','🍩','🎈','🚀','🎮'];
+        let memoryCards = [];
+        let memoryRevealed = [];
+        let memoryMatched = 0;
+
+        function initMemoryGame() {
+            const deck = [...memoryEmojis, ...memoryEmojis]
+                .map((emoji, i) => ({ id: i, emoji, matched: false }))
+                .sort(() => Math.random() - 0.5);
+            memoryCards = deck;
+            memoryRevealed = [];
+            memoryMatched = gameState.memorySolved ? 25 : 0;
+            if (gameState.memorySolved) memoryCards.forEach(c => c.matched = true);
+            document.getElementById('memory-attempts').innerText = gameState.memoryAttempts;
+            document.getElementById('memory-matched').innerText = memoryMatched;
+            renderMemoryBoard();
+        }
+
+        function renderMemoryBoard() {
+            const board = document.getElementById('memory-board');
+            if (!memoryCards.length) initMemoryGame();
+            board.innerHTML = '';
+            memoryCards.forEach((card, index) => {
+                const btn = document.createElement('button');
+                const shown = card.matched || memoryRevealed.includes(index);
+                btn.className = `memory-card ${shown ? 'revealed' : ''} ${card.matched ? 'matched' : ''}`;
+                btn.innerText = shown ? card.emoji : '❔';
+                btn.onclick = () => flipMemoryCard(index);
+                if (card.matched) btn.disabled = true;
+                board.appendChild(btn);
+            });
+        }
+
+        function flipMemoryCard(index) {
+            const card = memoryCards[index];
+            if (!card || card.matched || memoryRevealed.includes(index) || memoryRevealed.length === 2 || gameState.memorySolved) return;
+            memoryRevealed.push(index);
+            renderMemoryBoard();
+            if (memoryRevealed.length < 2) return;
+            gameState.memoryAttempts += 1;
+            document.getElementById('memory-attempts').innerText = gameState.memoryAttempts;
+            const [a, b] = memoryRevealed;
+            if (memoryCards[a].emoji === memoryCards[b].emoji) {
+                memoryCards[a].matched = true;
+                memoryCards[b].matched = true;
+                memoryMatched += 1;
+                document.getElementById('memory-matched').innerText = memoryMatched;
+                memoryRevealed = [];
+                if (memoryMatched === 25) {
+                    gameState.memorySolved = true;
+                    gameState.unlockedFlappy = true;
+                    checkUnlocks();
+                    document.getElementById('slot-result').innerText = 'Memory terminé, Flappy déverrouillé ✅';
+                }
+                renderMemoryBoard();
+                return;
+            }
+            setTimeout(() => { memoryRevealed = []; renderMemoryBoard(); }, 650);
+        }
+
+        // ==========================================
+        // BONUS: ROULETTE + BLACKJACK (RELAX SPACE)
         // ==========================================
         const sCanv = document.getElementById('slot-canvas');
         const sCtx = sCanv.getContext('2d');
-        let slotReels = ['🍒', '🍋', '⭐'];
+        const rouletteSlices = [
+            { label: '-1', gain: 0, color: '#6b7280', weight: 45 },
+            { label: '+1', gain: 2, color: '#2563eb', weight: 28 },
+            { label: '+3', gain: 4, color: '#16a34a', weight: 18 },
+            { label: '+8', gain: 9, color: '#f59e0b', weight: 7 },
+            { label: 'JACKPOT', gain: 20, color: '#ef4444', weight: 2 }
+        ];
+        let rouletteAngle = 0;
 
-        function drawSlotMachine() {
-            sCtx.fillStyle = '#111';
-            sCtx.fillRect(0, 0, sCanv.width, sCanv.height);
-            sCtx.fillStyle = '#2a3042';
-            sCtx.fillRect(20, 20, sCanv.width - 40, sCanv.height - 40);
-            sCtx.fillStyle = '#03dac6';
-            sCtx.font = '54px sans-serif';
-            sCtx.fillText(slotReels[0], 70, 130);
-            sCtx.fillText(slotReels[1], 155, 130);
-            sCtx.fillText(slotReels[2], 240, 130);
+        function weightedRoulettePick() {
+            const total = rouletteSlices.reduce((acc, s) => acc + s.weight, 0);
+            let roll = Math.random() * total;
+            for (const slice of rouletteSlices) {
+                roll -= slice.weight;
+                if (roll <= 0) return slice;
+            }
+            return rouletteSlices[0];
+        }
+
+        function drawRoulette(pointerIndex = null) {
+            sCtx.clearRect(0, 0, sCanv.width, sCanv.height);
+            const cx = 120, cy = 110, r = 85;
+            const sliceAngle = (Math.PI * 2) / rouletteSlices.length;
+            rouletteSlices.forEach((slice, i) => {
+                const start = rouletteAngle + i * sliceAngle;
+                sCtx.beginPath(); sCtx.moveTo(cx, cy);
+                sCtx.arc(cx, cy, r, start, start + sliceAngle);
+                sCtx.closePath();
+                sCtx.fillStyle = slice.color;
+                sCtx.fill();
+                sCtx.fillStyle = '#fff';
+                sCtx.font = '12px sans-serif';
+                sCtx.fillText(slice.label, cx + Math.cos(start + sliceAngle / 2) * 45 - 14, cy + Math.sin(start + sliceAngle / 2) * 45);
+            });
+            sCtx.fillStyle = '#fff';
+            sCtx.beginPath();
+            sCtx.moveTo(cx + r + 15, cy); sCtx.lineTo(cx + r + 35, cy - 10); sCtx.lineTo(cx + r + 35, cy + 10);
+            sCtx.closePath(); sCtx.fill();
+            if (pointerIndex !== null) {
+                sCtx.fillStyle = '#03dac6';
+                sCtx.font = 'bold 14px sans-serif';
+                sCtx.fillText(`Case: ${rouletteSlices[pointerIndex].label}`, 225, 120);
+            }
         }
 
         function spinSlotMachine() {
-            if (gameState.slotTokens <= 0) {
-                document.getElementById('slot-result').innerText = 'Plus de jetons 😢';
-                return;
-            }
-
+            if (gameState.slotTokens <= 0) return document.getElementById('slot-result').innerText = 'Plus de jetons 😢';
             gameState.slotTokens -= 1;
-            const symbols = ['🍒', '🍋', '⭐', '🍉', '7️⃣'];
-            slotReels = Array.from({ length: 3 }, () => symbols[Math.floor(Math.random() * symbols.length)]);
+            const result = weightedRoulettePick();
+            const idx = rouletteSlices.indexOf(result);
+            const sliceAngle = (Math.PI * 2) / rouletteSlices.length;
+            const targetAngle = (Math.PI * 8) + ((rouletteSlices.length - idx) * sliceAngle);
+            const startAngle = rouletteAngle;
+            const startTime = performance.now();
+            const duration = 1700;
 
-            let gain = 0;
-            if (slotReels[0] === slotReels[1] && slotReels[1] === slotReels[2]) gain = 8;
-            else if (slotReels[0] === slotReels[1] || slotReels[1] === slotReels[2] || slotReels[0] === slotReels[2]) gain = 2;
-
-            gameState.slotTokens += gain;
-            document.getElementById('slot-result').innerText = gain > 0 ? `+${gain} jetons !` : 'Perdu, retente ta chance';
-            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
-            drawSlotMachine();
+            function animate(now) {
+                const t = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - t, 3);
+                rouletteAngle = startAngle + (targetAngle - startAngle) * eased;
+                drawRoulette();
+                if (t < 1) return requestAnimationFrame(animate);
+                gameState.slotTokens += result.gain;
+                document.getElementById('slot-result').innerText = result.gain > 0 ? `Résultat ${result.label}: +${result.gain} jetons` : 'Perdu, maison gagnante.';
+                document.getElementById('slot-tokens').innerText = gameState.slotTokens;
+                drawRoulette(idx);
+            }
+            requestAnimationFrame(animate);
         }
 
-        drawSlotMachine();
+        const bCanv = document.getElementById('blackjack-canvas');
+        const bCtx = bCanv.getContext('2d');
+        let bjPlayer = [], bjDealer = [], bjDeck = [], bjDone = true;
+
+        function newDeck() {
+            const vals = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+            bjDeck = [];
+            for (let suit = 0; suit < 4; suit++) vals.forEach(v => bjDeck.push(v));
+            bjDeck.sort(() => Math.random() - 0.5);
+        }
+
+        function handValue(hand) {
+            let total = 0, aces = 0;
+            hand.forEach(v => { if (v === 'A') { total += 11; aces++; } else if (['J','Q','K'].includes(v)) total += 10; else total += Number(v); });
+            while (total > 21 && aces-- > 0) total -= 10;
+            return total;
+        }
+
+        function drawBlackjack(revealDealer = false) {
+            bCtx.fillStyle = '#052e16'; bCtx.fillRect(0,0,bCanv.width,bCanv.height);
+            bCtx.fillStyle = '#fff'; bCtx.font = '13px sans-serif';
+            bCtx.fillText(`Dealer: ${revealDealer ? handValue(bjDealer) : '?'}`, 10, 18);
+            bCtx.fillText(`Player: ${handValue(bjPlayer)}`, 10, 128);
+            bjDealer.forEach((c, i) => drawCard(20 + i * 45, 28, revealDealer || i === 0 ? c : '🂠'));
+            bjPlayer.forEach((c, i) => drawCard(20 + i * 45, 140, c));
+        }
+
+        function drawCard(x, y, label) {
+            bCtx.fillStyle = '#f8fafc'; bCtx.fillRect(x, y, 38, 56);
+            bCtx.strokeStyle = '#111'; bCtx.strokeRect(x, y, 38, 56);
+            bCtx.fillStyle = '#111'; bCtx.font = '14px sans-serif'; bCtx.fillText(label, x + 10, y + 32);
+        }
+
+        function startBlackjackRound() {
+            if (gameState.slotTokens < 2) return document.getElementById('blackjack-result').innerText = 'Pas assez de jetons (2 requis).';
+            gameState.slotTokens -= 2;
+            newDeck();
+            bjPlayer = [bjDeck.pop(), bjDeck.pop()];
+            bjDealer = [bjDeck.pop(), bjDeck.pop()];
+            bjDone = false;
+            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
+            document.getElementById('blackjack-result').innerText = 'Main en cours...';
+            animateBlackjackReveal(0);
+        }
+
+        function animateBlackjackReveal(step) {
+            drawBlackjack(false);
+            if (step > 2) return;
+            setTimeout(() => animateBlackjackReveal(step + 1), 120);
+        }
+
+        function blackjackHit() {
+            if (bjDone) return;
+            bjPlayer.push(bjDeck.pop());
+            drawBlackjack(false);
+            if (handValue(bjPlayer) > 21) finishBlackjack();
+        }
+
+        function blackjackStand() {
+            if (bjDone) return;
+            while (handValue(bjDealer) < 17) bjDealer.push(bjDeck.pop());
+            finishBlackjack();
+        }
+
+        function finishBlackjack() {
+            bjDone = true;
+            const p = handValue(bjPlayer), d = handValue(bjDealer);
+            let msg = 'Égalité.';
+            if (p > 21) msg = 'Bust, perdu.';
+            else if (d > 21 || p > d) { gameState.slotTokens += 5; msg = 'Gagné ! +5 jetons'; }
+            else if (p < d) msg = 'Perdu.';
+            else { gameState.slotTokens += 2; msg = 'Push, mise remboursée (+2).'; }
+            document.getElementById('slot-tokens').innerText = gameState.slotTokens;
+            document.getElementById('blackjack-result').innerText = msg;
+            drawBlackjack(true);
+        }
+
+        drawRoulette();
+        drawBlackjack(false);
 
         // ==========================================
         // MINIGAME 3: SWARM SURVIVAL (Brutal Mode)
@@ -728,12 +960,16 @@
         });
 
         function resetMinigameProgress() {
+            gameState.unlockedMemory = false;
             gameState.unlockedFlappy = false;
             gameState.unlockedFinal = false;
+            gameState.memorySolved = false;
+            gameState.memoryAttempts = 0;
             gameState.tetrisHigh = 0;
             gameState.flappyHigh = 0;
             document.getElementById('tetris-score').innerText = "0";
             document.getElementById('flappy-score').innerText = "0";
+            initMemoryGame();
             checkUnlocks();
             saveGame();
             
