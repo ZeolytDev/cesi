@@ -18,7 +18,7 @@
             margin: 0; padding: 0; font-family: 'Roboto', 'Segoe UI', sans-serif;
             background: radial-gradient(circle at top, #1f263c 0%, #121212 45%);
             color: var(--text);
-            height: 100vh; overflow: hidden; user-select: none; display: flex; flex-direction: column;
+            min-height: 100vh; overflow-x: hidden; overflow-y: auto; user-select: none; display: flex; flex-direction: column;
         }
 
         /* --- TABS NAVIGATION --- */
@@ -88,11 +88,11 @@
         .death-popup-card h3 { margin: 8px 0; color: var(--gold); }
 
         /* --- SCREENS --- */
-        .screen { display: none; width: 100%; height: 100%; flex: 1; }
+        .screen { display: none; width: 100%; flex: 1; min-height: 0; overflow-y: auto; }
         .screen.active { display: flex; }
 
         /* --- CLICKER LAYOUT --- */
-        #game-layer { display: flex; width: 100%; height: 100%; transition: filter 0.5s ease; }
+        #game-layer { display: flex; width: 100%; height: 100%; min-height: 0; transition: filter 0.5s ease; }
         .blurred { filter: blur(20px); pointer-events: none; }
         .game-area { flex: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #2f3855 0%, #121212 78%); position: relative; }
         .shop-area { flex: 4; background: linear-gradient(170deg, #1e1e2c 0%, #151723 100%); display: flex; flex-direction: column; border-left: 1px solid var(--border-soft); max-width: 450px; }
@@ -133,7 +133,7 @@
         #admin-status { min-height: 20px; color: var(--text-sec); font-size: 0.85rem; margin-top: 6px; }
 
         /* --- MINIGAME CANVASES --- */
-        .canvas-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #111; }
+        .canvas-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; background: #111; padding: 16px 12px 28px; box-sizing: border-box; }
         canvas { border: 2px solid var(--accent); background: #000; box-shadow: 0 0 20px rgba(187,134,252,0.2); }
         .minigame-ui { text-align: center; margin-bottom: 15px; }
         .minigame-ui h2 { margin: 0; color: var(--accent); }
@@ -142,10 +142,54 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
 
-        .relax-grid { display: grid; grid-template-columns: repeat(2, minmax(340px, 1fr)); gap: 18px; width: min(95vw, 900px); }
-        .relax-card { background: #171c2a; border: 1px solid var(--border-soft); border-radius: 10px; padding: 12px; }
-        .relax-card h3 { margin: 0 0 8px; color: var(--green); }
-        .actions-row { display:flex; gap:8px; justify-content:center; margin-top:8px; flex-wrap:wrap; }
+        .relax-lounge {
+            width: min(95vw, 1080px);
+            display: grid;
+            grid-template-columns: 230px 1fr;
+            gap: 16px;
+            align-items: start;
+        }
+        .relax-menu {
+            background: linear-gradient(170deg, #1a2032 0%, #111625 100%);
+            border: 1px solid var(--border-soft);
+            border-radius: 14px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 12px;
+        }
+        .relax-menu h3 { margin: 0 0 4px; color: var(--accent); }
+        .relax-menu-btn {
+            border: 1px solid #3a4462;
+            border-radius: 10px;
+            background: #1f2638;
+            color: #dce4ff;
+            padding: 10px;
+            text-align: left;
+            cursor: pointer;
+            transition: .25s ease;
+            font-weight: 700;
+        }
+        .relax-menu-btn:hover { background: #2a3248; transform: translateX(3px); }
+        .relax-menu-btn.active { background: linear-gradient(90deg, #03dac6, #2dd4bf); color: #03111d; border-color: transparent; box-shadow: 0 6px 18px rgba(3,218,198,0.35); }
+        .relax-content { background: rgba(14, 20, 34, 0.78); border: 1px solid rgba(187, 134, 252, 0.22); border-radius: 16px; padding: 14px; }
+        .relax-section { display: none; }
+        .relax-section.active { display: block; }
+        .relax-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+        .relax-card {
+            background: linear-gradient(165deg, #1a2134 0%, #131a2b 100%);
+            border: 1px solid rgba(126, 144, 192, 0.28);
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02), 0 14px 26px rgba(0, 0, 0, 0.3);
+        }
+        .relax-card h3 { margin: 0 0 8px; color: #57f2df; }
+        .relax-card p { margin: 0; color: #c2ccdf; }
+        #screen-relax canvas { border-color: #03dac6; border-radius: 10px; box-shadow: 0 0 30px rgba(3,218,198,0.16); }
+        .actions-row { display:flex; gap:8px; justify-content:center; margin-top:10px; flex-wrap:wrap; }
         .memory-board {
             display:grid; grid-template-columns: repeat(10, 52px); gap:8px; justify-content:center;
             margin-top: 10px; max-height: 360px; overflow-y: auto; padding: 8px; background: #0d111d; border-radius: 10px; border: 1px solid #2f3855;
@@ -154,6 +198,11 @@
         .memory-card:hover { transform: translateY(-2px); }
         .memory-card.revealed, .memory-card.matched { background:#03dac6; color:#111; }
         .memory-card.matched { cursor:default; opacity:.85; }
+
+        @media (max-width: 900px) {
+            .relax-lounge { grid-template-columns: 1fr; }
+            .relax-menu { position: static; }
+        }
 
         /* --- LOGIN MODAL --- */
         #login-modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(6,8,14,0.8); z-index: 10; }
@@ -265,68 +314,88 @@
         <div class="canvas-container">
             <div class="minigame-ui">
                 <h2>ESPACE DÉTENTE 🎰🃏</h2>
-                <p>Machine à sous + Roulette + Blackjack. Mise libre partout.</p>
+                <p>Choisis ton ambiance et navigue entre les jeux depuis le menu lounge.</p>
                 <h3 style="color:var(--gold)">Jetons: <span id="slot-tokens">50</span></h3>
                 <p id="poker-unlock-hint">Atteins 1000 jetons pour débloquer Poker Ultimate.</p>
             </div>
-            <div class="relax-grid">
-                <div class="relax-card">
-                    <h3>Machine à sous</h3>
-                    <p id="slot-result">Prêt à lancer</p>
-                    <canvas id="slot-canvas" width="360" height="220"></canvas>
-                    <div class="actions-row">
-                        <input id="slot-bet" type="number" min="1" value="5" style="width:100px" />
-                        <button class="buy-btn can-buy" onclick="spinSlotMachine()">Lancer</button>
+            <div class="relax-lounge">
+                <aside class="relax-menu">
+                    <h3>Menu lounge</h3>
+                    <button class="relax-menu-btn active" onclick="switchRelaxPanel('relax-games', this)">🎮 Jeux de casino</button>
+                    <button class="relax-menu-btn" onclick="switchRelaxPanel('relax-social', this)">🤝 Espace social</button>
+                    <button class="relax-menu-btn" onclick="switchRelaxPanel('relax-services', this)">✨ Services VIP</button>
+                </aside>
+                <div class="relax-content">
+                    <div id="relax-games" class="relax-section active">
+                        <div class="relax-grid">
+                            <div class="relax-card">
+                                <h3>Machine à sous néon</h3>
+                                <p id="slot-result">Prêt à lancer</p>
+                                <canvas id="slot-canvas" width="360" height="220"></canvas>
+                                <div class="actions-row">
+                                    <input id="slot-bet" type="number" min="1" value="5" style="width:100px" />
+                                    <button class="buy-btn can-buy" onclick="spinSlotMachine()">Lancer</button>
+                                </div>
+                            </div>
+                            <div class="relax-card">
+                                <h3>Roulette truquée (Rouge/Noir/Pair/Impair)</h3>
+                                <p id="roulette-result">Choisis une mise puis lance.</p>
+                                <canvas id="roulette-canvas" width="360" height="220"></canvas>
+                                <div class="actions-row" style="margin-bottom:8px; flex-wrap: wrap;">
+                                    <button class="buy-btn" onclick="setRouletteBetType('red')">Rouge</button>
+                                    <button class="buy-btn" onclick="setRouletteBetType('black')">Noir</button>
+                                    <button class="buy-btn" onclick="setRouletteBetType('even')">Pair</button>
+                                    <button class="buy-btn" onclick="setRouletteBetType('odd')">Impair</button>
+                                </div>
+                                <div class="actions-row">
+                                    <input id="roulette-bet" type="number" min="1" value="5" style="width:100px" />
+                                    <button class="buy-btn can-buy" onclick="spinRoulette()">Miser</button>
+                                </div>
+                            </div>
+                            <div class="relax-card">
+                                <h3>Poker Classique</h3>
+                                <p id="classic-poker-result">5 cartes contre la banque, meilleure combinaison gagne.</p>
+                                <div class="actions-row">
+                                    <input id="classic-poker-bet" type="number" min="1" value="20" style="width:100px" />
+                                    <button class="buy-btn" onclick="playClassicPoker()">Distribuer</button>
+                                </div>
+                            </div>
+                            <div class="relax-card">
+                                <h3>Blackjack premium</h3>
+                                <p id="blackjack-result">Lance une partie.</p>
+                                <canvas id="blackjack-canvas" width="360" height="220"></canvas>
+                                <div class="actions-row">
+                                    <input id="blackjack-bet" type="number" min="1" value="10" style="width:100px" />
+                                    <button class="buy-btn" onclick="startBlackjackRound()">Nouvelle main</button>
+                                    <button class="buy-btn" onclick="blackjackHit()">Hit</button>
+                                    <button class="buy-btn" onclick="blackjackStand()">Stand</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div class="relax-card">
-                    <h3>Roulette truquée (Rouge/Noir/Pair/Impair)</h3>
-                    <p id="roulette-result">Choisis une mise puis lance.</p>
-                    <canvas id="roulette-canvas" width="360" height="220"></canvas>
-                    <div class="actions-row" style="margin-bottom:8px; flex-wrap: wrap;">
-                        <button class="buy-btn" onclick="setRouletteBetType('red')">Rouge</button>
-                        <button class="buy-btn" onclick="setRouletteBetType('black')">Noir</button>
-                        <button class="buy-btn" onclick="setRouletteBetType('even')">Pair</button>
-                        <button class="buy-btn" onclick="setRouletteBetType('odd')">Impair</button>
+                    <div id="relax-social" class="relax-section">
+                        <div class="relax-grid">
+                            <div class="relax-card">
+                                <h3>Don de jetons</h3>
+                                <p id="donation-result">Transfère tes jetons aux joueurs disponibles.</p>
+                                <div class="actions-row">
+                                    <select id="donation-user" style="width:180px; padding:8px; background:#121726; color:#fff; border:1px solid #39415a; border-radius:6px;"></select>
+                                    <input id="donation-amount" type="number" min="1" value="15" style="width:100px" />
+                                    <button class="buy-btn" onclick="donateTokens()">Donner</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="actions-row">
-                        <input id="roulette-bet" type="number" min="1" value="5" style="width:100px" />
-                        <button class="buy-btn can-buy" onclick="spinRoulette()">Miser</button>
-                    </div>
-                </div>
-                <div class="relax-card">
-                    <h3>Poker Classique</h3>
-                    <p id="classic-poker-result">5 cartes contre la banque, meilleure combinaison gagne.</p>
-                    <div class="actions-row">
-                        <input id="classic-poker-bet" type="number" min="1" value="20" style="width:100px" />
-                        <button class="buy-btn" onclick="playClassicPoker()">Distribuer</button>
-                    </div>
-                </div>
-                <div class="relax-card">
-                    <h3>Don de jetons</h3>
-                    <p id="donation-result">Transfère tes jetons aux joueurs disponibles.</p>
-                    <div class="actions-row">
-                        <select id="donation-user" style="width:180px; padding:8px; background:#121726; color:#fff; border:1px solid #39415a; border-radius:6px;"></select>
-                        <input id="donation-amount" type="number" min="1" value="15" style="width:100px" />
-                        <button class="buy-btn" onclick="donateTokens()">Donner</button>
-                    </div>
-                </div>
-                <div class="relax-card">
-                    <h3>Suppression des pubs</h3>
-                    <p id="ads-result">Retire la bannière pub rétro définitivement pour ce compte.</p>
-                    <div class="actions-row">
-                        <button id="remove-ads-btn" class="buy-btn can-buy" onclick="buyAdRemoval()">Enlever les pubs (10000 jetons)</button>
-                    </div>
-                </div>
-                <div class="relax-card">
-                    <h3>Blackjack</h3>
-                    <p id="blackjack-result">Lance une partie.</p>
-                    <canvas id="blackjack-canvas" width="360" height="220"></canvas>
-                    <div class="actions-row">
-                        <input id="blackjack-bet" type="number" min="1" value="10" style="width:100px" />
-                        <button class="buy-btn" onclick="startBlackjackRound()">Nouvelle main</button>
-                        <button class="buy-btn" onclick="blackjackHit()">Hit</button>
-                        <button class="buy-btn" onclick="blackjackStand()">Stand</button>
+                    <div id="relax-services" class="relax-section">
+                        <div class="relax-grid">
+                            <div class="relax-card">
+                                <h3>Suppression des pubs</h3>
+                                <p id="ads-result">Retire la bannière pub rétro définitivement pour ce compte.</p>
+                                <div class="actions-row">
+                                    <button id="remove-ads-btn" class="buy-btn can-buy" onclick="buyAdRemoval()">Enlever les pubs (10000 jetons)</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -564,6 +633,20 @@
             btnElement.classList.add('active');
             currentActiveTab = screenId;
             if (screenId === 'screen-memory') renderMemoryBoard();
+            if (screenId === 'screen-relax') switchRelaxPanel('relax-games');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function switchRelaxPanel(sectionId, button = null) {
+            document.querySelectorAll('.relax-section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.relax-menu-btn').forEach(btn => btn.classList.remove('active'));
+            const target = document.getElementById(sectionId);
+            if (target) target.classList.add('active');
+            if (button) button.classList.add('active');
+            else {
+                const first = document.querySelector(`.relax-menu-btn[onclick*="${sectionId}"]`);
+                if (first) first.classList.add('active');
+            }
         }
 
         function checkUnlocks() {
@@ -1070,20 +1153,28 @@
         }
 
         function drawSlot(lastRoll = ['❔', '❔', '❔']) {
-            sCtx.fillStyle = '#111827';
+            const grad = sCtx.createLinearGradient(0, 0, 0, sCanv.height);
+            grad.addColorStop(0, '#120f29');
+            grad.addColorStop(1, '#1f2b46');
+            sCtx.fillStyle = grad;
             sCtx.fillRect(0, 0, sCanv.width, sCanv.height);
-            sCtx.fillStyle = '#374151';
+            sCtx.strokeStyle = 'rgba(3, 218, 198, 0.5)';
+            sCtx.lineWidth = 2;
+            sCtx.strokeRect(10, 10, 340, 145);
+            sCtx.fillStyle = 'rgba(7, 14, 28, 0.85)';
             sCtx.fillRect(20, 25, 320, 120);
             lastRoll.forEach((sym, i) => {
-                sCtx.fillStyle = '#0b1220';
+                sCtx.fillStyle = '#111827';
                 sCtx.fillRect(35 + i * 100, 40, 80, 90);
+                sCtx.strokeStyle = '#3ddad7';
+                sCtx.strokeRect(35 + i * 100, 40, 80, 90);
                 sCtx.fillStyle = '#fff';
-                sCtx.font = '42px sans-serif';
-                sCtx.fillText(sym, 55 + i * 100, 95);
+                sCtx.font = '45px sans-serif';
+                sCtx.fillText(sym, 52 + i * 100, 99);
             });
-            sCtx.fillStyle = '#9ca3af';
+            sCtx.fillStyle = '#8bf8ee';
             sCtx.font = '13px sans-serif';
-            sCtx.fillText('3 symboles identiques = x5 | 2 identiques = x2 | sinon perdu', 24, 178);
+            sCtx.fillText('3 symboles identiques = x5 | 2 identiques = x2 | sinon perdu', 22, 184);
         }
 
         function spinSlotMachine() {
@@ -1101,7 +1192,11 @@
         }
 
         function drawRoulette(pointer = null) {
-            rCtx.clearRect(0, 0, rCanv.width, rCanv.height);
+            const bg = rCtx.createLinearGradient(0, 0, 0, rCanv.height);
+            bg.addColorStop(0, '#111827');
+            bg.addColorStop(1, '#1d2d4c');
+            rCtx.fillStyle = bg;
+            rCtx.fillRect(0, 0, rCanv.width, rCanv.height);
             const cx = 120, cy = 110, r = 86;
             const sliceAngle = (Math.PI * 2) / rouletteNumbers.length;
             rouletteNumbers.forEach((entry, i) => {
@@ -1121,7 +1216,7 @@
                 rCtx.fillText(String(entry.n), -6, 0);
                 rCtx.restore();
             });
-            rCtx.fillStyle = '#fff';
+            rCtx.fillStyle = '#22d3ee';
             rCtx.beginPath();
             rCtx.moveTo(cx + r + 15, cy); rCtx.lineTo(cx + r + 35, cy - 10); rCtx.lineTo(cx + r + 35, cy + 10);
             rCtx.closePath();
@@ -1194,7 +1289,12 @@
         }
 
         function drawBlackjack(revealDealer = false) {
-            bCtx.fillStyle = '#052e16'; bCtx.fillRect(0,0,bCanv.width,bCanv.height);
+            const felt = bCtx.createLinearGradient(0, 0, 0, bCanv.height);
+            felt.addColorStop(0, '#0f5132');
+            felt.addColorStop(1, '#06351f');
+            bCtx.fillStyle = felt; bCtx.fillRect(0,0,bCanv.width,bCanv.height);
+            bCtx.strokeStyle = 'rgba(255,215,0,0.45)';
+            bCtx.strokeRect(8, 8, bCanv.width - 16, bCanv.height - 16);
             bCtx.fillStyle = '#fff'; bCtx.font = '13px sans-serif';
             bCtx.fillText(`Dealer: ${revealDealer ? handValue(bjDealer) : '?'}`, 10, 18);
             bCtx.fillText(`Player: ${handValue(bjPlayer)}`, 10, 128);
